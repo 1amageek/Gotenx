@@ -1,0 +1,608 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		12D508142EA7ED7E00F07010 /* GotenxUI in Frameworks */ = {isa = PBXBuildFile; productRef = 12D508132EA7ED7E00F07010 /* GotenxUI */; };
+		12D5085C2EA8C6AB00F07010 /* GotenxCore in Frameworks */ = {isa = PBXBuildFile; productRef = 12D5085B2EA8C6AB00F07010 /* GotenxCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		12D507E82EA7E86C00F07010 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 12D507D02EA7E86B00F07010 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 12D507D72EA7E86B00F07010;
+			remoteInfo = Gotenx;
+		};
+		12D507F22EA7E86C00F07010 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 12D507D02EA7E86B00F07010 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 12D507D72EA7E86B00F07010;
+			remoteInfo = Gotenx;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		12D507D82EA7E86B00F07010 /* Gotenx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gotenx.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		12D507E72EA7E86C00F07010 /* GotenxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GotenxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		12D507F12EA7E86C00F07010 /* GotenxUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GotenxUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		12D507DA2EA7E86B00F07010 /* Gotenx */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Gotenx;
+			sourceTree = "<group>";
+		};
+		12D507EA2EA7E86C00F07010 /* GotenxTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GotenxTests;
+			sourceTree = "<group>";
+		};
+		12D507F42EA7E86C00F07010 /* GotenxUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GotenxUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		12D507D52EA7E86B00F07010 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				12D5085C2EA8C6AB00F07010 /* GotenxCore in Frameworks */,
+				12D508142EA7ED7E00F07010 /* GotenxUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		12D507E42EA7E86C00F07010 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		12D507EE2EA7E86C00F07010 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		12D507CF2EA7E86B00F07010 = {
+			isa = PBXGroup;
+			children = (
+				12D507DA2EA7E86B00F07010 /* Gotenx */,
+				12D507EA2EA7E86C00F07010 /* GotenxTests */,
+				12D507F42EA7E86C00F07010 /* GotenxUITests */,
+				12D508122EA7ED7E00F07010 /* Frameworks */,
+				12D507D92EA7E86B00F07010 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		12D507D92EA7E86B00F07010 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				12D507D82EA7E86B00F07010 /* Gotenx.app */,
+				12D507E72EA7E86C00F07010 /* GotenxTests.xctest */,
+				12D507F12EA7E86C00F07010 /* GotenxUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		12D508122EA7ED7E00F07010 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		12D507D72EA7E86B00F07010 /* Gotenx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 12D507FB2EA7E86C00F07010 /* Build configuration list for PBXNativeTarget "Gotenx" */;
+			buildPhases = (
+				12D507D42EA7E86B00F07010 /* Sources */,
+				12D507D52EA7E86B00F07010 /* Frameworks */,
+				12D507D62EA7E86B00F07010 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				12D507DA2EA7E86B00F07010 /* Gotenx */,
+			);
+			name = Gotenx;
+			packageProductDependencies = (
+				12D508132EA7ED7E00F07010 /* GotenxUI */,
+				12D5085B2EA8C6AB00F07010 /* GotenxCore */,
+			);
+			productName = Gotenx;
+			productReference = 12D507D82EA7E86B00F07010 /* Gotenx.app */;
+			productType = "com.apple.product-type.application";
+		};
+		12D507E62EA7E86C00F07010 /* GotenxTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 12D507FE2EA7E86C00F07010 /* Build configuration list for PBXNativeTarget "GotenxTests" */;
+			buildPhases = (
+				12D507E32EA7E86C00F07010 /* Sources */,
+				12D507E42EA7E86C00F07010 /* Frameworks */,
+				12D507E52EA7E86C00F07010 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				12D507E92EA7E86C00F07010 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				12D507EA2EA7E86C00F07010 /* GotenxTests */,
+			);
+			name = GotenxTests;
+			packageProductDependencies = (
+			);
+			productName = GotenxTests;
+			productReference = 12D507E72EA7E86C00F07010 /* GotenxTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		12D507F02EA7E86C00F07010 /* GotenxUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 12D508012EA7E86C00F07010 /* Build configuration list for PBXNativeTarget "GotenxUITests" */;
+			buildPhases = (
+				12D507ED2EA7E86C00F07010 /* Sources */,
+				12D507EE2EA7E86C00F07010 /* Frameworks */,
+				12D507EF2EA7E86C00F07010 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				12D507F32EA7E86C00F07010 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				12D507F42EA7E86C00F07010 /* GotenxUITests */,
+			);
+			name = GotenxUITests;
+			packageProductDependencies = (
+			);
+			productName = GotenxUITests;
+			productReference = 12D507F12EA7E86C00F07010 /* GotenxUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		12D507D02EA7E86B00F07010 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					12D507D72EA7E86B00F07010 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					12D507E62EA7E86C00F07010 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 12D507D72EA7E86B00F07010;
+					};
+					12D507F02EA7E86C00F07010 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 12D507D72EA7E86B00F07010;
+					};
+				};
+			};
+			buildConfigurationList = 12D507D32EA7E86B00F07010 /* Build configuration list for PBXProject "Gotenx" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 12D507CF2EA7E86B00F07010;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 12D507D92EA7E86B00F07010 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				12D507D72EA7E86B00F07010 /* Gotenx */,
+				12D507E62EA7E86C00F07010 /* GotenxTests */,
+				12D507F02EA7E86C00F07010 /* GotenxUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		12D507D62EA7E86B00F07010 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		12D507E52EA7E86C00F07010 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		12D507EF2EA7E86C00F07010 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		12D507D42EA7E86B00F07010 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		12D507E32EA7E86C00F07010 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		12D507ED2EA7E86C00F07010 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		12D507E92EA7E86C00F07010 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 12D507D72EA7E86B00F07010 /* Gotenx */;
+			targetProxy = 12D507E82EA7E86C00F07010 /* PBXContainerItemProxy */;
+		};
+		12D507F32EA7E86C00F07010 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 12D507D72EA7E86B00F07010 /* Gotenx */;
+			targetProxy = 12D507F22EA7E86C00F07010 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		12D507F92EA7E86C00F07010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = WWCKBW8CKN;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		12D507FA2EA7E86C00F07010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = WWCKBW8CKN;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		12D507FC2EA7E86C00F07010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WWCKBW8CKN;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = team.stamp.gotenx.Gotenx;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		12D507FD2EA7E86C00F07010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WWCKBW8CKN;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = team.stamp.gotenx.Gotenx;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		12D507FF2EA7E86C00F07010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WWCKBW8CKN;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = team.stamp.gotenx.GotenxTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gotenx.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gotenx";
+			};
+			name = Debug;
+		};
+		12D508002EA7E86C00F07010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WWCKBW8CKN;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = team.stamp.gotenx.GotenxTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gotenx.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gotenx";
+			};
+			name = Release;
+		};
+		12D508022EA7E86C00F07010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WWCKBW8CKN;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = team.stamp.gotenx.GotenxUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = Gotenx;
+			};
+			name = Debug;
+		};
+		12D508032EA7E86C00F07010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WWCKBW8CKN;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = team.stamp.gotenx.GotenxUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = Gotenx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		12D507D32EA7E86B00F07010 /* Build configuration list for PBXProject "Gotenx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				12D507F92EA7E86C00F07010 /* Debug */,
+				12D507FA2EA7E86C00F07010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		12D507FB2EA7E86C00F07010 /* Build configuration list for PBXNativeTarget "Gotenx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				12D507FC2EA7E86C00F07010 /* Debug */,
+				12D507FD2EA7E86C00F07010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		12D507FE2EA7E86C00F07010 /* Build configuration list for PBXNativeTarget "GotenxTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				12D507FF2EA7E86C00F07010 /* Debug */,
+				12D508002EA7E86C00F07010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		12D508012EA7E86C00F07010 /* Build configuration list for PBXNativeTarget "GotenxUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				12D508022EA7E86C00F07010 /* Debug */,
+				12D508032EA7E86C00F07010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		12D508132EA7ED7E00F07010 /* GotenxUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GotenxUI;
+		};
+		12D5085B2EA8C6AB00F07010 /* GotenxCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GotenxCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 12D507D02EA7E86B00F07010 /* Project object */;
+}
