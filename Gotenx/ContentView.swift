@@ -37,7 +37,10 @@ struct ContentView: View {
             MainCanvasView(
                 simulation: viewModel.selectedSimulation,
                 plotViewModel: plotViewModel,
-                isRunning: viewModel.isSimulationRunning
+                logViewModel: viewModel.logViewModel,
+                isRunning: viewModel.isSimulationRunning,
+                currentSimulationTime: viewModel.currentSimulationTime,
+                totalSimulationTime: viewModel.totalSimulationTime
             )
             .toolbar {
                 ToolbarView(

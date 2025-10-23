@@ -12,14 +12,23 @@ import GotenxUI
 struct MainCanvasView: View {
     let simulation: Simulation?
     @Bindable var plotViewModel: PlotViewModel
+    @Bindable var logViewModel: LogViewModel
     let isRunning: Bool
+    let currentSimulationTime: Float
+    let totalSimulationTime: Float
+
+    @State private var splitRatio: CGFloat = 0.7
+    @State private var isDraggingSplitter = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            if let simulation = simulation {
-                // Plot area
-                ScrollView {
-                    VStack(spacing: 32) {
+        GeometryReader { geometry in
+            let availableHeight = geometry.size.height
+
+            VStack(spacing: 0) {
+                if let simulation = simulation {
+                    // Upper Panel: Plot area
+                    ScrollView {
+                        VStack(spacing: 32) {
                         if let plotData = plotViewModel.plotData {
                             TemperaturePlotView(
                                 plotData: plotData,
@@ -39,31 +48,84 @@ struct MainCanvasView: View {
                             )
                             .frame(height: 400)
                         } else {
-                            PlaceholderView(message: "Loading plot data...")
-                                .frame(height: 500)
-                                .task {
-                                    await plotViewModel.loadPlotData(for: simulation)
-                                }
+                            // Show appropriate message based on simulation status
+                            switch simulation.status {
+                            case .completed:
+                                PlaceholderView(message: "Loading plot data...", showSpinner: true)
+                                    .frame(height: 500)
+                                    .task {
+                                        await plotViewModel.loadPlotData(for: simulation)
+                                    }
+                            case .running:
+                                PlaceholderView(message: "Simulation running...", showSpinner: false)
+                                    .frame(height: 500)
+                            case .paused:
+                                PlaceholderView(message: "Simulation paused", showSpinner: false)
+                                    .frame(height: 500)
+                            case .failed(let error):
+                                PlaceholderView(message: "Simulation failed: \(error)", showSpinner: false)
+                                    .frame(height: 500)
+                            case .cancelled:
+                                PlaceholderView(message: "Simulation cancelled", showSpinner: false)
+                                    .frame(height: 500)
+                            case .draft, .queued:
+                                PlaceholderView(message: "Run simulation to view results", showSpinner: false)
+                                    .frame(height: 500)
+                            }
                         }
                     }
                     .padding(24)
                 }
+                .frame(height: availableHeight * splitRatio)
 
-                // Time slider
-                if let plotData = plotViewModel.plotData {
-                    TimeSliderView(
-                        currentIndex: $plotViewModel.currentTimeIndex,
-                        timePoints: plotData.time
-                    )
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 16)
-                    .background(.ultraThinMaterial)
+                // Draggable Divider
+                DraggableDivider(
+                    isDragging: $isDraggingSplitter,
+                    splitRatio: $splitRatio,
+                    availableHeight: availableHeight
+                )
+
+                // Lower Panel: Console
+                ConsoleView(
+                    logViewModel: logViewModel,
+                    plotViewModel: plotViewModel,
+                    currentTime: currentSimulationTime,
+                    totalTime: totalSimulationTime,
+                    isRunning: isRunning
+                )
+                .frame(height: availableHeight * (1 - splitRatio))
+                } else {
+                    VStack(spacing: 0) {
+                        PlaceholderView(message: "Select a simulation", showSpinner: false)
+                            .frame(height: availableHeight * splitRatio)
+
+                        DraggableDivider(
+                            isDragging: $isDraggingSplitter,
+                            splitRatio: $splitRatio,
+                            availableHeight: availableHeight
+                        )
+
+                        ConsoleView(
+                            logViewModel: logViewModel,
+                            plotViewModel: plotViewModel,
+                            currentTime: 0,
+                            totalTime: 1.0,
+                            isRunning: false
+                        )
+                        .frame(height: availableHeight * (1 - splitRatio))
+                    }
                 }
-            } else {
-                PlaceholderView(message: "Select a simulation")
             }
         }
         .navigationTitle(simulation?.name ?? "Gotenx")
+        .onChange(of: simulation?.id) { oldValue, newValue in
+            // Clear plot data and logs when simulation changes
+            if oldValue != newValue {
+                plotViewModel.plotData = nil
+                plotViewModel.currentTimeIndex = 0
+                logViewModel.clear()
+            }
+        }
     }
 }
 
@@ -301,81 +363,42 @@ struct DensityPlotView: View {
     }
 }
 
-struct TimeSliderView: View {
-    @Binding var currentIndex: Int
-    let timePoints: [Float]
-
-    var body: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Simulation Time")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-
-                Text("\(currentTime, specifier: "%.3f") s")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
-            }
-
-            Slider(
-                value: Binding(
-                    get: { Double(currentIndex) },
-                    set: { currentIndex = Int($0) }
-                ),
-                in: 0...Double(max(timePoints.count - 1, 0)),
-                step: 1
-            )
-            .tint(Color(red: 0.3, green: 0.6, blue: 1.0))
-
-            Text("\(currentIndex + 1)/\(timePoints.count)")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .monospacedDigit()
-                .frame(width: 60, alignment: .trailing)
-        }
-    }
-
-    private var currentTime: Float {
-        guard currentIndex < timePoints.count else { return 0 }
-        return timePoints[currentIndex]
-    }
-}
-
 struct PlaceholderView: View {
     let message: String
+    var showSpinner: Bool = false
     @State private var isAnimating = false
 
     var body: some View {
         VStack(spacing: 24) {
             ZStack {
-                Circle()
-                    .stroke(lineWidth: 3)
-                    .foregroundStyle(.quaternary)
-                    .frame(width: 80, height: 80)
+                if showSpinner {
+                    Circle()
+                        .stroke(lineWidth: 3)
+                        .foregroundStyle(.quaternary)
+                        .frame(width: 80, height: 80)
 
-                Circle()
-                    .trim(from: 0, to: 0.7)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.3, green: 0.6, blue: 1.0),
-                                Color(red: 0.3, green: 0.6, blue: 1.0).opacity(0.1)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
-                    )
-                    .frame(width: 80, height: 80)
-                    .rotationEffect(.degrees(isAnimating ? 360 : 0))
-                    .animation(
-                        .linear(duration: 1.0).repeatForever(autoreverses: false),
-                        value: isAnimating
-                    )
+                    Circle()
+                        .trim(from: 0, to: 0.7)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.3, green: 0.6, blue: 1.0),
+                                    Color(red: 0.3, green: 0.6, blue: 1.0).opacity(0.1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                        )
+                        .frame(width: 80, height: 80)
+                        .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                        .animation(
+                            .linear(duration: 1.0).repeatForever(autoreverses: false),
+                            value: isAnimating
+                        )
+                }
 
-                Image(systemName: "chart.xyaxis.line")
+                Image(systemName: iconName)
                     .font(.system(size: 32))
                     .foregroundStyle(.secondary)
             }
@@ -391,7 +414,23 @@ struct PlaceholderView: View {
                 .fill(.thinMaterial)
         }
         .onAppear {
-            isAnimating = true
+            if showSpinner {
+                isAnimating = true
+            }
+        }
+    }
+
+    private var iconName: String {
+        if message.contains("Loading") {
+            return "chart.xyaxis.line"
+        } else if message.contains("running") || message.contains("paused") {
+            return "hourglass"
+        } else if message.contains("failed") {
+            return "exclamationmark.triangle"
+        } else if message.contains("cancelled") {
+            return "xmark.circle"
+        } else {
+            return "play.circle"
         }
     }
 }
@@ -418,6 +457,71 @@ struct CustomLegend: View {
         .background {
             RoundedRectangle(cornerRadius: 8)
                 .fill(.ultraThinMaterial)
+        }
+    }
+}
+
+struct DraggableDivider: View {
+    @Binding var isDragging: Bool
+    @Binding var splitRatio: CGFloat
+    let availableHeight: CGFloat
+
+    @State private var dragStartRatio: CGFloat = 0
+    @State private var isHovering: Bool = false
+
+    var body: some View {
+        ZStack {
+            // Visible divider line
+            Rectangle()
+                .fill(dividerColor)
+                .frame(height: 1)
+
+            // Hit area (larger for easier grabbing)
+            Rectangle()
+                .fill(Color.clear)
+                .frame(height: 16)
+                .contentShape(Rectangle())
+        }
+        .background(
+            Rectangle()
+                .fill(isHovering || isDragging ? Color.accentColor.opacity(0.1) : Color.clear)
+        )
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    // Capture start position only once per drag
+                    if !isDragging {
+                        dragStartRatio = splitRatio
+                    }
+                    isDragging = true
+
+                    // Calculate relative delta from start position
+                    let delta = value.translation.height / availableHeight
+                    splitRatio = max(0.3, min(0.8, dragStartRatio + delta))
+                }
+                .onEnded { _ in
+                    isDragging = false
+                }
+        )
+        #if os(macOS)
+        .onHover { hovering in
+            isHovering = hovering
+            if hovering {
+                NSCursor.resizeUpDown.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
+        #endif
+    }
+
+    private var dividerColor: Color {
+        if isDragging {
+            return .accentColor
+        } else if isHovering {
+            return .gray
+        } else {
+            return .gray.opacity(0.3)
         }
     }
 }

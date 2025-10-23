@@ -42,6 +42,9 @@ final class AppViewModel {
     var showSidebar: Bool = true
     var errorMessage: String?
 
+    // Logging
+    var logViewModel: LogViewModel = LogViewModel()
+
     // Model context (injected from view)
     weak var modelContext: ModelContext?
 
@@ -78,41 +81,61 @@ final class AppViewModel {
         guard simulationTask == nil else {
             logger.error("Simulation already running")
             errorMessage = "A simulation is already running"
+            logViewModel.log("Cannot start: Another simulation is running", level: .warning, category: "Simulation")
             return
         }
 
         guard let configData = simulation.configurationData else {
             logger.error("No configuration data")
             errorMessage = "Simulation has no configuration"
+            logViewModel.log("Cannot start: No configuration data", level: .error, category: "Simulation")
             return
         }
 
         logger.info("Starting simulation: \(simulation.name)")
+        logViewModel.log("Starting simulation: \(simulation.name)", level: .info, category: "Simulation")
 
         simulationTask = Task {
+            defer {
+                // Always clean up task state (runs even if Task is cancelled)
+                Task { @MainActor in
+                    isSimulationRunning = false
+                    simulationTask = nil
+                    logViewModel.log("Simulation task cleanup completed", level: .debug, category: "Simulation")
+                }
+            }
+
             do {
                 // Decode configuration
+                logViewModel.log("Decoding configuration...", level: .debug, category: "Config")
                 let config = try JSONDecoder().decode(SimulationConfiguration.self, from: configData)
 
-                isSimulationRunning = true
-                isPaused = false
-                simulationProgress = 0.0
-                simulation.status = .running(progress: 0.0)
-                totalSimulationTime = config.time.end
-                lastUpdateTime = .distantPast
+                await MainActor.run {
+                    isSimulationRunning = true
+                    isPaused = false
+                    simulationProgress = 0.0
+                    simulation.status = .running(progress: 0.0)
+                    totalSimulationTime = config.time.end
+                    lastUpdateTime = .distantPast
+                }
+
+                logViewModel.log("Simulation initialized (duration: \(config.time.end)s, cells: 100)", level: .info, category: "Simulation")
 
                 // Get data store
+                logViewModel.log("Initializing data store...", level: .debug, category: "Storage")
                 let store = try getDataStore()
 
                 // Create default initial profiles
                 // Note: This is a simplified version - in production, you would:
                 // 1. Convert SimulationConfiguration to RuntimeParams (requires swift-gotenx updates)
                 // 2. Get proper initial conditions
+                logViewModel.log("Creating initial profiles...", level: .debug, category: "Simulation")
                 let initialProfiles = createDefaultProfiles(nCells: 100)
 
                 // For now, we'll create a minimal result since we can't actually run the orchestrator
                 // without the proper RuntimeParams conversion
                 logger.warning("Simulation execution not yet implemented - creating placeholder result")
+                logViewModel.log("⚠ Using placeholder execution (orchestrator not yet integrated)", level: .warning, category: "Simulation")
 
                 // Create placeholder result
                 let result = SimulationResult(
@@ -134,60 +157,67 @@ final class AppViewModel {
                     ]
                 )
 
-                // Save results (handles actor isolation internally)
-                await saveResults(simulation: simulation, result: result, store: store)
+                // Save results (now throws on error instead of catching)
+                logViewModel.log("Saving simulation results...", level: .info, category: "Storage")
+                try await saveResults(simulation: simulation, result: result, store: store)
+
+                logViewModel.log("✓ Simulation completed successfully", level: .info, category: "Simulation")
 
             } catch is CancellationError {
                 await MainActor.run {
                     simulation.status = .cancelled
                     logger.info("Simulation cancelled: \(simulation.name)")
+                    logViewModel.log("⚠ Simulation cancelled by user", level: .warning, category: "Simulation")
                 }
             } catch {
                 await MainActor.run {
                     simulation.status = .failed(error: error.localizedDescription)
                     errorMessage = error.localizedDescription
                     logger.error("Simulation failed: \(error.localizedDescription)")
+                    logViewModel.log("✗ Simulation failed: \(error.localizedDescription)", level: .error, category: "Simulation")
                 }
-            }
-
-            await MainActor.run {
-                isSimulationRunning = false
-                simulationTask = nil
             }
         }
     }
 
     /// Pause simulation
+    /// Note: Currently not fully implemented - placeholder implementation only updates status
+    /// TODO: Implement actual simulation pause when orchestrator integration is complete
     func pauseSimulation() {
-        guard isSimulationRunning, !isPaused else { return }
+        guard isSimulationRunning, !isPaused, simulationTask != nil else { return }
 
         isPaused = true
-        isSimulationRunning = false
 
         if let simulation = selectedSimulation {
             simulation.status = .paused(at: simulationProgress)
         }
 
-        logger.info("Simulation paused")
+        logger.info("Simulation paused (status only - execution continues)")
     }
 
     /// Resume simulation
+    /// Note: Currently not fully implemented - placeholder implementation only updates status
+    /// TODO: Implement actual simulation resume when orchestrator integration is complete
     func resumeSimulation() {
-        guard isPaused, let simulation = selectedSimulation else { return }
+        guard isPaused, let simulation = selectedSimulation, simulationTask != nil else { return }
 
         isPaused = false
-        isSimulationRunning = true
         simulation.status = .running(progress: simulationProgress)
 
-        logger.info("Simulation resumed")
+        logger.info("Simulation resumed (status only)")
     }
 
     /// Stop simulation
     func stopSimulation() {
-        simulationTask?.cancel()
-        simulationTask = nil
+        guard let task = simulationTask else { return }
+
+        logViewModel.log("Stopping simulation...", level: .warning, category: "Simulation")
+
+        // Cancel the task (defer block will clean up isSimulationRunning)
+        task.cancel()
+
+        // Immediately update UI state
         isPaused = false
-        isSimulationRunning = false
 
         if let simulation = selectedSimulation {
             simulation.status = .cancelled
@@ -226,54 +256,42 @@ final class AppViewModel {
 
     // MARK: - Private Methods
 
-    private func saveResults(simulation: Simulation, result: SimulationResult, store: SimulationDataStore) async {
-        do {
-            // Save complete result to file (actor boundary crossing)
-            try await store.saveSimulationResult(result, simulationID: simulation.id)
+    private func saveResults(simulation: Simulation, result: SimulationResult, store: SimulationDataStore) async throws {
+        // Save complete result to file (actor boundary crossing)
+        try await store.saveSimulationResult(result, simulationID: simulation.id)
 
-            // Update simulation metadata (MainActor required for SwiftData)
-            await MainActor.run {
-                simulation.finalProfiles = try? JSONEncoder().encode(result.finalProfiles)
-                simulation.statistics = try? JSONEncoder().encode(result.statistics)
-                simulation.status = .completed
-                simulation.modifiedAt = Date()
+        // Update simulation metadata (MainActor required for SwiftData)
+        try await MainActor.run {
+            simulation.finalProfiles = try? JSONEncoder().encode(result.finalProfiles)
+            simulation.statistics = try? JSONEncoder().encode(result.statistics)
+            simulation.status = .completed
+            simulation.modifiedAt = Date()
 
-                // Create lightweight metadata from timeSeries
-                if let timeSeries = result.timeSeries {
-                    simulation.snapshotMetadata = timeSeries.enumerated().map { index, timePoint in
-                        SnapshotMetadata(
-                            time: timePoint.time,
-                            index: index,
-                            coreTi: (timePoint.profiles.ionTemperature.first ?? 0) / 1000.0,
-                            edgeTi: (timePoint.profiles.ionTemperature.last ?? 0) / 1000.0,
-                            avgNe: timePoint.profiles.electronDensity.reduce(0, +) / Float(timePoint.profiles.electronDensity.count) / 1e20,
-                            peakNe: (timePoint.profiles.electronDensity.max() ?? 0) / 1e20,
-                            plasmaCurrentMA: timePoint.derived?.I_plasma,
-                            fusionGainQ: timePoint.derived.map { derived in
-                                let P_input = derived.P_auxiliary + derived.P_ohmic + 1e-10
-                                return derived.P_fusion / P_input
-                            }
-                        )
-                    }
-                }
-
-                // Save to SwiftData
-                do {
-                    if let context = modelContext {
-                        try context.save()
-                    }
-                    logger.notice("Saved simulation result: \(simulation.name)")
-                } catch {
-                    logger.error("Failed to save to SwiftData: \(error)")
-                    errorMessage = "Failed to save results: \(error.localizedDescription)"
+            // Create lightweight metadata from timeSeries
+            if let timeSeries = result.timeSeries {
+                simulation.snapshotMetadata = timeSeries.enumerated().map { index, timePoint in
+                    SnapshotMetadata(
+                        time: timePoint.time,
+                        index: index,
+                        coreTi: (timePoint.profiles.ionTemperature.first ?? 0) / 1000.0,
+                        edgeTi: (timePoint.profiles.ionTemperature.last ?? 0) / 1000.0,
+                        avgNe: timePoint.profiles.electronDensity.reduce(0, +) / Float(timePoint.profiles.electronDensity.count) / 1e20,
+                        peakNe: (timePoint.profiles.electronDensity.max() ?? 0) / 1e20,
+                        plasmaCurrentMA: timePoint.derived?.I_plasma,
+                        fusionGainQ: timePoint.derived.map { derived in
+                            let P_input = derived.P_auxiliary + derived.P_ohmic + 1e-10
+                            return derived.P_fusion / P_input
+                        }
+                    )
                 }
             }
 
-        } catch {
-            await MainActor.run {
-                logger.error("Failed to save results: \(error)")
-                errorMessage = "Failed to save results: \(error.localizedDescription)"
+            // Save to SwiftData (throw error if fails)
+            if let context = modelContext {
+                try context.save()
             }
+
+            logger.notice("Saved simulation result: \(simulation.name)")
         }
     }
 

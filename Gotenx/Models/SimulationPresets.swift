@@ -52,8 +52,10 @@ enum ConfigurationPreset: String, CaseIterable, Identifiable {
                 builder.runtime.static.mesh.minorRadius = 2.0
                 builder.runtime.static.mesh.toroidalField = 5.3
 
-                builder.runtime.dynamic.transport.modelType = .constant
-                builder.runtime.dynamic.transport.parameters = [:]
+                builder.runtime.dynamic.transport = TransportConfig(
+                    modelType: .constant,
+                    parameters: [:]
+                )
 
                 builder.runtime.dynamic.boundaries = BoundaryConfig(
                     ionTemperature: 100.0,
@@ -76,12 +78,14 @@ enum ConfigurationPreset: String, CaseIterable, Identifiable {
                 builder.runtime.static.mesh.minorRadius = 2.0
                 builder.runtime.static.mesh.toroidalField = 5.3
 
-                builder.runtime.dynamic.transport.modelType = .bohmGyrobohm
-                builder.runtime.dynamic.transport.parameters = [
-                    "bohm_coeff": 1.0,
-                    "gyrobohm_coeff": 1.0,
-                    "ion_mass_number": 2.0
-                ]
+                builder.runtime.dynamic.transport = TransportConfig(
+                    modelType: .bohmGyrobohm,
+                    parameters: [
+                        "bohm_coeff": 1.0,
+                        "gyrobohm_coeff": 1.0,
+                        "ion_mass_number": 2.0
+                    ]
+                )
 
                 builder.runtime.dynamic.boundaries = BoundaryConfig(
                     ionTemperature: 100.0,
@@ -104,13 +108,15 @@ enum ConfigurationPreset: String, CaseIterable, Identifiable {
                 builder.runtime.static.mesh.minorRadius = 2.0
                 builder.runtime.static.mesh.toroidalField = 5.3
 
-                builder.runtime.dynamic.transport.modelType = .densityTransition
-                builder.runtime.dynamic.transport.parameters = [
-                    "transition_density": 2.5e19,
-                    "transition_width": 0.5e19,
-                    "ion_mass_number": 2.0,
-                    "ri_coefficient": 0.5
-                ]
+                builder.runtime.dynamic.transport = TransportConfig(
+                    modelType: .densityTransition,
+                    parameters: [
+                        "transition_density": 2.5e19,
+                        "transition_width": 0.5e19,
+                        "ion_mass_number": 2.0,
+                        "ri_coefficient": 0.5
+                    ]
+                )
 
                 builder.runtime.dynamic.boundaries = BoundaryConfig(
                     ionTemperature: 100.0,
@@ -133,8 +139,10 @@ enum ConfigurationPreset: String, CaseIterable, Identifiable {
                 builder.runtime.static.mesh.minorRadius = 2.0
                 builder.runtime.static.mesh.toroidalField = 5.3
 
-                builder.runtime.dynamic.transport.modelType = .qlknn
-                builder.runtime.dynamic.transport.parameters = [:]
+                builder.runtime.dynamic.transport = TransportConfig(
+                    modelType: .qlknn,
+                    parameters: [:]
+                )
 
                 builder.runtime.dynamic.boundaries = BoundaryConfig(
                     ionTemperature: 100.0,

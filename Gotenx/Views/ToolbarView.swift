@@ -51,22 +51,20 @@ struct ToolbarView: ToolbarContent {
         // Center: Progress
         ToolbarItem(placement: .principal) {
             if viewModel.isSimulationRunning {
-                VStack(spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text("Running")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.green)
+                HStack(spacing: 8) {
+                    Text("Running")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.green)
 
-                        Text("\(Int(viewModel.simulationProgress * 100))%")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
+                    Text("\(Int(viewModel.simulationProgress * 100))%")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
 
                     ProgressView(value: viewModel.simulationProgress)
-                        .frame(width: 200)
+                        .frame(width: 120)
                         .tint(
                             LinearGradient(
                                 colors: [
@@ -77,14 +75,9 @@ struct ToolbarView: ToolbarContent {
                                 endPoint: .trailing
                             )
                         )
-
-                    Text("t = \(viewModel.currentSimulationTime, specifier: "%.3f") / \(viewModel.totalSimulationTime, specifier: "%.3f") s")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .monospacedDigit()
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.vertical, 6)
                 .background {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(.ultraThinMaterial)
