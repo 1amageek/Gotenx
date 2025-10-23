@@ -27,8 +27,14 @@ struct SidebarView: View {
         .navigationTitle(workspace.name)
         .toolbar {
             ToolbarItem(placement: .automatic) {
-                Button {
-                    createNewSimulation()
+                Menu {
+                    ForEach(ConfigurationPreset.allCases) { preset in
+                        Button {
+                            createSimulation(with: preset)
+                        } label: {
+                            Label(preset.rawValue, systemImage: preset.icon)
+                        }
+                    }
                 } label: {
                     Label("New Simulation", systemImage: "plus")
                 }
@@ -37,25 +43,12 @@ struct SidebarView: View {
         }
     }
 
-    private func createNewSimulation() {
-        // Create default configuration
-        let config = SimulationConfiguration.build { builder in
-            builder.time.start = 0.0
-            builder.time.end = 2.0
-            builder.time.initialDt = 1e-3
-
-            builder.runtime.static.mesh.nCells = 100
-            builder.runtime.static.mesh.majorRadius = 3.0
-            builder.runtime.static.mesh.minorRadius = 1.0
-            builder.runtime.static.mesh.toroidalField = 2.5
-
-            builder.output.saveInterval = 0.1
-        }
-
+    private func createSimulation(with preset: ConfigurationPreset) {
+        let config = preset.configuration
         guard let configData = try? JSONEncoder().encode(config) else { return }
 
         let simulation = Simulation(
-            name: "New Simulation",
+            name: "New \(preset.rawValue)",
             configurationData: configData
         )
         simulation.workspace = workspace

@@ -8,9 +8,9 @@
 import Foundation
 import SwiftData
 
-/// Saved configuration preset
+/// User-saved configuration preset (SwiftData model)
 @Model
-final class ConfigurationPreset {
+final class SavedPreset {
     var id: UUID
     var name: String
     var configurationData: Data

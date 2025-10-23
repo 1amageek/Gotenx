@@ -737,4 +737,541 @@ extension DynamicRuntimeParams {
 
 ---
 
-**End of v2.0 Updates Document**
+# v2.1 - Phase 9 Transport Models Support
+
+**Version**: 2.1
+**Date**: 2025-10-23
+**Status**: PHASE 9 FEATURE INTEGRATION
+
+---
+
+## Overview
+
+This update adds support for swift-gotenx Phase 9 features, enabling users to access all Transport models including the cutting-edge **Turbulence Transition** physics.
+
+### Phase 9 New Features
+
+**Transport Models Available:**
+1. `constant` - Simple constant diffusivity (existing)
+2. `bohmGyrobohm` - Empirical transport model (existing)
+3. `qlknn` - Neural network transport model (macOS only, existing)
+4. `densityTransition` - **NEW**: ITG↔RI regime transition
+
+**Key Innovation:**
+- Density-dependent turbulence regime transition
+- Based on Kinoshita et al., *Phys. Rev. Lett.* **132**, 235101 (2024)
+- Isotope effects properly implemented
+- Critical bug fixes for numerical stability
+
+---
+
+## UI Design Extensions
+
+### 1. ConfigInspectorView Enhancement
+
+**Current State**: Read-only display of `modelType.rawValue`
+
+**New Design**: Interactive Transport configuration section
+
+```swift
+struct ConfigInspectorView: View {
+    let simulation: Simulation?
+    @State private var selectedModelType: TransportModelType = .constant
+    @State private var transportParameters: [String: Float] = [:]
+
+    var body: some View {
+        if let simulation = simulation,
+           let configData = simulation.configurationData,
+           let config = try? JSONDecoder().decode(SimulationConfiguration.self, from: configData) {
+
+            Form {
+                // Existing sections...
+
+                // NEW: Transport Model Configuration
+                Section {
+                    Picker("Model Type", selection: $selectedModelType) {
+                        ForEach(TransportModelType.allCases, id: \.self) { modelType in
+                            Text(modelType.displayName).tag(modelType)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    // Dynamic parameters based on model type
+                    TransportParametersView(
+                        modelType: selectedModelType,
+                        parameters: $transportParameters
+                    )
+
+                } header: {
+                    Label("Transport Configuration", systemImage: "wind")
+                } footer: {
+                    Text(selectedModelType.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+```
+
+### 2. TransportParametersView (New Component)
+
+**Purpose**: Dynamic parameter input based on selected model
+
+```swift
+struct TransportParametersView: View {
+    let modelType: TransportModelType
+    @Binding var parameters: [String: Float]
+
+    var body: some View {
+        Group {
+            switch modelType {
+            case .constant:
+                LabeledContent("Diffusivity") {
+                    TextField("m²/s", value: binding(for: "diffusivity", default: 1.0), format: .number)
+                        .multilineTextAlignment(.trailing)
+                }
+
+            case .bohmGyrobohm:
+                LabeledContent("Bohm Coefficient") {
+                    TextField("", value: binding(for: "bohm_coeff", default: 1.0), format: .number)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("GyroBohm Coefficient") {
+                    TextField("", value: binding(for: "gyrobohm_coeff", default: 1.0), format: .number)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Ion Mass Number") {
+                    TextField("", value: binding(for: "ion_mass_number", default: 2.0), format: .number)
+                        .multilineTextAlignment(.trailing)
+                }
+
+            case .qlknn:
+                Text("Uses neural network - no user parameters")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+            case .densityTransition:
+                LabeledContent("Transition Density") {
+                    TextField("m⁻³", value: binding(for: "transition_density", default: 2.5e19), format: .scientific)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Transition Width") {
+                    TextField("m⁻³", value: binding(for: "transition_width", default: 0.5e19), format: .scientific)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Ion Mass Number") {
+                    TextField("", value: binding(for: "ion_mass_number", default: 2.0), format: .number)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("RI Coefficient") {
+                    TextField("", value: binding(for: "ri_coefficient", default: 0.5), format: .number)
+                        .multilineTextAlignment(.trailing)
+                }
+            }
+        }
+    }
+
+    private func binding(for key: String, default defaultValue: Float) -> Binding<Float> {
+        Binding(
+            get: { parameters[key] ?? defaultValue },
+            set: { parameters[key] = $0 }
+        )
+    }
+}
+```
+
+### 3. Configuration Preset System
+
+**New Feature**: Pre-configured templates for common scenarios
+
+```swift
+enum ConfigurationPreset: String, CaseIterable, Identifiable {
+    case constant = "Constant Transport"
+    case bohmGyroBohm = "Bohm-GyroBohm (Empirical)"
+    case turbulenceTransition = "Turbulence Transition (Advanced)"
+    case qlknn = "QLKNN (Neural Network)"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .constant: return "equal.circle"
+        case .bohmGyroBohm: return "waveform.path"
+        case .turbulenceTransition: return "wind"
+        case .qlknn: return "brain"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .constant:
+            return "Simple constant diffusivity model. Fast and stable for testing."
+        case .bohmGyroBohm:
+            return "Empirical transport model with Bohm and GyroBohm scaling. Good for general scenarios."
+        case .turbulenceTransition:
+            return "Advanced density-dependent ITG↔RI transition. Based on 2024 experimental discovery."
+        case .qlknn:
+            return "Neural network-based transport model. High accuracy, macOS only."
+        }
+    }
+
+    var configuration: SimulationConfiguration {
+        switch self {
+        case .constant:
+            return SimulationConfiguration.build { builder in
+                builder.time.start = 0.0
+                builder.time.end = 2.0
+                builder.time.initialDt = 1e-3
+
+                builder.runtime.static.mesh.nCells = 100
+                builder.runtime.static.mesh.majorRadius = 3.0
+                builder.runtime.static.mesh.minorRadius = 1.0
+                builder.runtime.static.mesh.toroidalField = 2.5
+
+                builder.runtime.dynamic.transport.modelType = .constant
+                builder.runtime.dynamic.transport.parameters = [:]
+
+                builder.output.saveInterval = 0.1
+            }
+
+        case .bohmGyroBohm:
+            return SimulationConfiguration.build { builder in
+                // Same basic config...
+                builder.runtime.dynamic.transport.modelType = .bohmGyrobohm
+                builder.runtime.dynamic.transport.parameters = [
+                    "bohm_coeff": 1.0,
+                    "gyrobohm_coeff": 1.0,
+                    "ion_mass_number": 2.0
+                ]
+            }
+
+        case .turbulenceTransition:
+            return SimulationConfiguration.build { builder in
+                // Same basic config...
+                builder.runtime.dynamic.transport.modelType = .densityTransition
+                builder.runtime.dynamic.transport.parameters = [
+                    "transition_density": 2.5e19,
+                    "transition_width": 0.5e19,
+                    "ion_mass_number": 2.0,
+                    "ri_coefficient": 0.5
+                ]
+            }
+
+        case .qlknn:
+            return SimulationConfiguration.build { builder in
+                // Same basic config...
+                builder.runtime.dynamic.transport.modelType = .qlknn
+                builder.runtime.dynamic.transport.parameters = [:]
+            }
+        }
+    }
+}
+```
+
+### 4. SidebarView Preset Selection
+
+**Enhancement**: Replace simple "New Simulation" button with Preset menu
+
+```swift
+struct SidebarView: View {
+    // ... existing properties ...
+    @State private var showPresetPicker = false
+
+    var body: some View {
+        List(selection: $selectedSimulation) {
+            Section("Simulations") {
+                ForEach(workspace.simulations) { simulation in
+                    SimulationRowView(simulation: simulation)
+                        .tag(simulation)
+                }
+                .onDelete(perform: deleteSimulations)
+            }
+        }
+        .navigationTitle(workspace.name)
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Menu {
+                    ForEach(ConfigurationPreset.allCases) { preset in
+                        Button {
+                            createSimulation(with: preset)
+                        } label: {
+                            Label(preset.rawValue, systemImage: preset.icon)
+                        }
+                    }
+                } label: {
+                    Label("New Simulation", systemImage: "plus")
+                }
+                .buttonStyle(.glass)
+            }
+        }
+    }
+
+    private func createSimulation(with preset: ConfigurationPreset) {
+        let config = preset.configuration
+        guard let configData = try? JSONEncoder().encode(config) else { return }
+
+        let simulation = Simulation(
+            name: "New \(preset.rawValue)",
+            configurationData: configData
+        )
+        simulation.workspace = workspace
+        workspace.simulations.append(simulation)
+        modelContext.insert(simulation)
+
+        do {
+            try modelContext.save()
+            selectedSimulation = simulation
+        } catch {
+            print("Failed to create simulation: \(error)")
+        }
+    }
+}
+```
+
+---
+
+## Data Model Extensions
+
+### 1. ConfigViewModel Updates
+
+**New Properties:**
+
+```swift
+@MainActor
+@Observable
+final class ConfigViewModel {
+    // Existing...
+    var selectedPreset: ConfigurationPreset?
+    var isEditingConfiguration: Bool = false
+
+    // NEW: Transport model management
+    var selectedTransportModel: TransportModelType = .constant
+    var transportParameters: [String: Float] = [:]
+
+    /// Create configuration with specified transport model
+    func createConfiguration(
+        preset: ConfigurationPreset,
+        customParameters: [String: Float]? = nil
+    ) -> Data? {
+        var config = preset.configuration
+
+        if let params = customParameters {
+            // Override preset parameters with custom values
+            config.runtime.dynamic.transport.parameters = params
+        }
+
+        return try? JSONEncoder().encode(config)
+    }
+
+    /// Validate transport parameters
+    func validateParameters(for modelType: TransportModelType) -> Bool {
+        switch modelType {
+        case .densityTransition:
+            guard let transitionDensity = transportParameters["transition_density"],
+                  transitionDensity > 0 else { return false }
+            guard let transitionWidth = transportParameters["transition_width"],
+                  transitionWidth > 0 else { return false }
+            return true
+
+        case .bohmGyrobohm:
+            // Coefficients should be positive
+            let bohmCoeff = transportParameters["bohm_coeff"] ?? 1.0
+            let gyroBohm = transportParameters["gyrobohm_coeff"] ?? 1.0
+            return bohmCoeff >= 0 && gyroBohm >= 0
+
+        case .constant, .qlknn:
+            return true
+        }
+    }
+}
+```
+
+### 2. TransportModelType Extension
+
+**Add display helpers:**
+
+```swift
+extension TransportModelType {
+    var displayName: String {
+        switch self {
+        case .constant: return "Constant"
+        case .bohmGyrobohm: return "Bohm-GyroBohm"
+        case .qlknn: return "QLKNN"
+        case .densityTransition: return "Turbulence Transition"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .constant:
+            return "Simple constant diffusivity model"
+        case .bohmGyrobohm:
+            return "Empirical Bohm and GyroBohm scaling"
+        case .qlknn:
+            return "Neural network transport model (macOS only)"
+        case .densityTransition:
+            return "Density-dependent ITG↔RI transition with isotope effects"
+        }
+    }
+
+    var requiredParameters: [String] {
+        switch self {
+        case .constant:
+            return ["diffusivity"]
+        case .bohmGyrobohm:
+            return ["bohm_coeff", "gyrobohm_coeff", "ion_mass_number"]
+        case .qlknn:
+            return []
+        case .densityTransition:
+            return ["transition_density", "transition_width", "ion_mass_number", "ri_coefficient"]
+        }
+    }
+
+    var defaultParameters: [String: Float] {
+        switch self {
+        case .constant:
+            return ["diffusivity": 1.0]
+        case .bohmGyrobohm:
+            return [
+                "bohm_coeff": 1.0,
+                "gyrobohm_coeff": 1.0,
+                "ion_mass_number": 2.0
+            ]
+        case .qlknn:
+            return [:]
+        case .densityTransition:
+            return [
+                "transition_density": 2.5e19,
+                "transition_width": 0.5e19,
+                "ion_mass_number": 2.0,
+                "ri_coefficient": 0.5
+            ]
+        }
+    }
+}
+```
+
+---
+
+## Implementation Priority
+
+### Phase 1: Read-Only Display (✅ Already Done)
+- [x] InspectorView shows `modelType.rawValue`
+- [x] Basic configuration loading
+
+### Phase 2: Preset System (Recommended Next)
+- [ ] Implement `ConfigurationPreset` enum
+- [ ] Add preset menu to SidebarView
+- [ ] Test all 4 presets create valid configurations
+
+### Phase 3: Interactive Configuration (Advanced)
+- [ ] Implement `TransportParametersView`
+- [ ] Add ConfigInspectorView Transport section
+- [ ] Parameter validation
+- [ ] Real-time configuration updates
+
+### Phase 4: Advanced Features (Optional)
+- [ ] Configuration import/export
+- [ ] Parameter sensitivity visualization
+- [ ] Model comparison tools
+
+---
+
+## Usage Examples
+
+### Example 1: Create Turbulence Transition Simulation
+
+```swift
+// User flow:
+// 1. Click "New Simulation" in SidebarView
+// 2. Select "Turbulence Transition (Advanced)" from menu
+// 3. Simulation created with preset parameters
+
+// Result: Configuration
+{
+  "runtime": {
+    "dynamic": {
+      "transport": {
+        "modelType": "densityTransition",
+        "parameters": {
+          "transition_density": 2.5e19,
+          "transition_width": 0.5e19,
+          "ion_mass_number": 2.0,
+          "ri_coefficient": 0.5
+        }
+      }
+    }
+  }
+}
+```
+
+### Example 2: Customize Transport Parameters
+
+```swift
+// User flow:
+// 1. Select existing simulation
+// 2. Open Inspector → Config tab
+// 3. Change "Transition Density" to 3.0e19
+// 4. Click "Save Configuration"
+
+// ConfigViewModel handles update:
+func updateTransportParameters() {
+    var config = currentSimulation.configuration
+    config.runtime.dynamic.transport.parameters["transition_density"] = 3.0e19
+
+    if validateParameters(for: config.runtime.dynamic.transport.modelType) {
+        currentSimulation.configurationData = try? JSONEncoder().encode(config)
+    }
+}
+```
+
+### Example 3: Compare Isotopes (H vs D)
+
+```swift
+// Create two simulations with different ion masses:
+
+// Hydrogen (m = 1):
+let configH = SimulationConfiguration.build { builder in
+    builder.runtime.dynamic.transport.parameters["ion_mass_number"] = 1.0
+}
+
+// Deuterium (m = 2):
+let configD = SimulationConfiguration.build { builder in
+    builder.runtime.dynamic.transport.parameters["ion_mass_number"] = 2.0
+}
+
+// Run both and compare confinement times in plots
+```
+
+---
+
+## Testing Checklist (Phase 9 Features)
+
+- [ ] All 4 TransportModelType cases display correctly
+- [ ] Preset menu creates valid configurations
+- [ ] Turbulence Transition preset has correct parameters
+- [ ] Parameter validation prevents invalid values
+- [ ] Configuration serialization/deserialization works
+- [ ] InspectorView shows transport parameters read-only
+- [ ] No crashes when switching between models
+
+---
+
+## References
+
+1. **swift-gotenx Phase 9 Implementation**
+   - `docs/PHASE9_TURBULENCE_TRANSITION_IMPLEMENTATION.md`
+   - `MHD_TURBULENCE_FIXES_SUMMARY.md`
+
+2. **Kinoshita et al. (2024)**
+   - "Turbulence Transition in Magnetically Confined Hydrogen and Deuterium Plasmas"
+   - *Phys. Rev. Lett.* **132**, 235101
+
+3. **swift-gotenx Configuration Examples**
+   - `Examples/Configurations/turbulence_transition.json`
+
+---
+
+**End of v2.1 Updates Document**

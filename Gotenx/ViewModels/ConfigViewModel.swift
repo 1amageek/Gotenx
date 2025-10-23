@@ -15,7 +15,7 @@ private let logger = Logger(subsystem: "com.gotenx.app", category: "config")
 @MainActor
 @Observable
 final class ConfigViewModel {
-    var selectedPreset: ConfigurationPreset?
+    var selectedSavedPreset: SavedPreset?
     var isEditingConfiguration: Bool = false
 
     /// Create default ITER-like configuration

@@ -15,7 +15,7 @@ struct GotenxApp: App {
             Workspace.self,
             Simulation.self,
             Comparison.self,
-            ConfigurationPreset.self,
+            SavedPreset.self,
         ])
 
         let modelConfiguration = ModelConfiguration(
