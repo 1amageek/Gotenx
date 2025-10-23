@@ -134,10 +134,8 @@ final class AppViewModel {
                     ]
                 )
 
-                // Save results
-                await MainActor.run {
-                    saveResults(simulation: simulation, result: result, store: store)
-                }
+                // Save results (handles actor isolation internally)
+                await saveResults(simulation: simulation, result: result, store: store)
 
             } catch is CancellationError {
                 await MainActor.run {
@@ -201,9 +199,9 @@ final class AppViewModel {
     /// Delete simulation and associated data
     func deleteSimulation(_ simulation: Simulation) async {
         do {
-            // Delete file data
+            // Delete file data (actor boundary crossing)
             let store = try getDataStore()
-            try store.deleteSimulation(simulation.id)
+            try await store.deleteSimulation(simulation.id)
 
             // Remove from workspace
             workspace.simulations.removeAll { $0.id == simulation.id }
@@ -228,47 +226,54 @@ final class AppViewModel {
 
     // MARK: - Private Methods
 
-    @MainActor
-    private func saveResults(simulation: Simulation, result: SimulationResult, store: SimulationDataStore) {
+    private func saveResults(simulation: Simulation, result: SimulationResult, store: SimulationDataStore) async {
         do {
-            // Save complete result to file
-            try store.saveSimulationResult(result, simulationID: simulation.id)
+            // Save complete result to file (actor boundary crossing)
+            try await store.saveSimulationResult(result, simulationID: simulation.id)
 
-            // Update simulation metadata
-            simulation.finalProfiles = try? JSONEncoder().encode(result.finalProfiles)
-            simulation.statistics = try? JSONEncoder().encode(result.statistics)
-            simulation.status = .completed
-            simulation.modifiedAt = Date()
+            // Update simulation metadata (MainActor required for SwiftData)
+            await MainActor.run {
+                simulation.finalProfiles = try? JSONEncoder().encode(result.finalProfiles)
+                simulation.statistics = try? JSONEncoder().encode(result.statistics)
+                simulation.status = .completed
+                simulation.modifiedAt = Date()
 
-            // Create lightweight metadata from timeSeries
-            if let timeSeries = result.timeSeries {
-                simulation.snapshotMetadata = timeSeries.enumerated().map { index, timePoint in
-                    SnapshotMetadata(
-                        time: timePoint.time,
-                        index: index,
-                        coreTi: (timePoint.profiles.ionTemperature.first ?? 0) / 1000.0,
-                        edgeTi: (timePoint.profiles.ionTemperature.last ?? 0) / 1000.0,
-                        avgNe: timePoint.profiles.electronDensity.reduce(0, +) / Float(timePoint.profiles.electronDensity.count) / 1e20,
-                        peakNe: (timePoint.profiles.electronDensity.max() ?? 0) / 1e20,
-                        plasmaCurrentMA: timePoint.derived?.I_plasma,
-                        fusionGainQ: timePoint.derived.map { derived in
-                            let P_input = derived.P_auxiliary + derived.P_ohmic + 1e-10
-                            return derived.P_fusion / P_input
-                        }
-                    )
+                // Create lightweight metadata from timeSeries
+                if let timeSeries = result.timeSeries {
+                    simulation.snapshotMetadata = timeSeries.enumerated().map { index, timePoint in
+                        SnapshotMetadata(
+                            time: timePoint.time,
+                            index: index,
+                            coreTi: (timePoint.profiles.ionTemperature.first ?? 0) / 1000.0,
+                            edgeTi: (timePoint.profiles.ionTemperature.last ?? 0) / 1000.0,
+                            avgNe: timePoint.profiles.electronDensity.reduce(0, +) / Float(timePoint.profiles.electronDensity.count) / 1e20,
+                            peakNe: (timePoint.profiles.electronDensity.max() ?? 0) / 1e20,
+                            plasmaCurrentMA: timePoint.derived?.I_plasma,
+                            fusionGainQ: timePoint.derived.map { derived in
+                                let P_input = derived.P_auxiliary + derived.P_ohmic + 1e-10
+                                return derived.P_fusion / P_input
+                            }
+                        )
+                    }
+                }
+
+                // Save to SwiftData
+                do {
+                    if let context = modelContext {
+                        try context.save()
+                    }
+                    logger.notice("Saved simulation result: \(simulation.name)")
+                } catch {
+                    logger.error("Failed to save to SwiftData: \(error)")
+                    errorMessage = "Failed to save results: \(error.localizedDescription)"
                 }
             }
 
-            // Save to SwiftData
-            if let context = modelContext {
-                try context.save()
-            }
-
-            logger.notice("Saved simulation result: \(simulation.name)")
-
         } catch {
-            logger.error("Failed to save results: \(error)")
-            errorMessage = "Failed to save results: \(error.localizedDescription)"
+            await MainActor.run {
+                logger.error("Failed to save results: \(error)")
+                errorMessage = "Failed to save results: \(error.localizedDescription)"
+            }
         }
     }
 

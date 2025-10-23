@@ -47,7 +47,7 @@ final class PlotViewModel {
         do {
             // Load SimulationResult from storage
             let dataStore = try SimulationDataStore()
-            let result = try dataStore.loadSimulationResult(simulationID: simulation.id)
+            let result = try await dataStore.loadSimulationResult(simulationID: simulation.id)
 
             // Use GotenxUI's built-in conversion
             let plotData = try PlotData(from: result)

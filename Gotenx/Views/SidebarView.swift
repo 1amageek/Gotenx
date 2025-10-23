@@ -87,26 +87,48 @@ struct SidebarView: View {
 
 struct SimulationRowView: View {
     let simulation: Simulation
+    @State private var isHovered = false
 
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             StatusIndicator(status: simulation.status)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(simulation.name)
                     .font(.body)
+                    .fontWeight(isHovered ? .medium : .regular)
 
-                Text(simulation.status.displayText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Text(simulation.status.displayText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    if !simulation.snapshotMetadata.isEmpty {
+                        Text("•")
+                            .font(.caption)
+                            .foregroundStyle(.quaternary)
+
+                        Text("\(simulation.snapshotMetadata.count) snapshots")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
             }
 
             Spacer()
 
-            if !simulation.snapshotMetadata.isEmpty {
-                Text("\(simulation.snapshotMetadata.count) snapshots")
+            if isHovered {
+                Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+                    .transition(.opacity.combined(with: .scale))
+            }
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
             }
         }
     }
@@ -114,29 +136,63 @@ struct SimulationRowView: View {
 
 struct StatusIndicator: View {
     let status: SimulationStatusEnum
+    @State private var isPulsing = false
 
     var body: some View {
-        Circle()
-            .fill(statusColor)
-            .frame(width: 8, height: 8)
+        ZStack {
+            // Glow effect for running status
+            if case .running = status {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 16, height: 16)
+                    .blur(radius: 4)
+                    .opacity(isPulsing ? 0.8 : 0.4)
+            }
+
+            // Main indicator
+            Circle()
+                .fill(statusColor)
+                .frame(width: 10, height: 10)
+                .shadow(color: statusColor.opacity(0.5), radius: 2, x: 0, y: 1)
+
+            // Pulse animation for running
+            if case .running = status {
+                Circle()
+                    .stroke(statusColor, lineWidth: 1.5)
+                    .frame(width: 10, height: 10)
+                    .scaleEffect(isPulsing ? 1.5 : 1.0)
+                    .opacity(isPulsing ? 0 : 1)
+            }
+        }
+        .frame(width: 20, height: 20)
+        .onAppear {
+            if case .running = status {
+                withAnimation(
+                    .easeInOut(duration: 1.5)
+                    .repeatForever(autoreverses: false)
+                ) {
+                    isPulsing = true
+                }
+            }
+        }
     }
 
     private var statusColor: Color {
         switch status {
         case .draft:
-            return .gray
+            return Color(.systemGray)
         case .queued:
-            return .yellow
+            return Color(.systemYellow)
         case .running:
-            return .green
+            return Color(.systemGreen)
         case .paused:
-            return .orange
+            return Color(.systemOrange)
         case .completed:
-            return .blue
+            return Color(.systemBlue)
         case .failed:
-            return .red
+            return Color(.systemRed)
         case .cancelled:
-            return .gray
+            return Color(.systemGray)
         }
     }
 }

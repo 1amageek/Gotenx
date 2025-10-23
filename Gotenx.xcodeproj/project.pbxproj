@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		12D508142EA7ED7E00F07010 /* GotenxUI in Frameworks */ = {isa = PBXBuildFile; productRef = 12D508132EA7ED7E00F07010 /* GotenxUI */; };
 		12D5085C2EA8C6AB00F07010 /* GotenxCore in Frameworks */ = {isa = PBXBuildFile; productRef = 12D5085B2EA8C6AB00F07010 /* GotenxCore */; };
+		12D508612EA8CCA900F07010 /* GotenxPhysics in Frameworks */ = {isa = PBXBuildFile; productRef = 12D508602EA8CCA900F07010 /* GotenxPhysics */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,6 +59,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				12D5085C2EA8C6AB00F07010 /* GotenxCore in Frameworks */,
+				12D508612EA8CCA900F07010 /* GotenxPhysics in Frameworks */,
 				12D508142EA7ED7E00F07010 /* GotenxUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -129,6 +131,7 @@
 			packageProductDependencies = (
 				12D508132EA7ED7E00F07010 /* GotenxUI */,
 				12D5085B2EA8C6AB00F07010 /* GotenxCore */,
+				12D508602EA8CCA900F07010 /* GotenxPhysics */,
 			);
 			productName = Gotenx;
 			productReference = 12D507D82EA7E86B00F07010 /* Gotenx.app */;
@@ -601,6 +604,10 @@
 		12D5085B2EA8C6AB00F07010 /* GotenxCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GotenxCore;
+		};
+		12D508602EA8CCA900F07010 /* GotenxPhysics */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GotenxPhysics;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -25,15 +25,15 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            // Left: Sidebar
+            // Sidebar: Simulation list
             SidebarView(
                 workspace: viewModel.workspace,
                 selectedSimulation: $viewModel.selectedSimulation
             )
             .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 400)
 
-        } content: {
-            // Center: Main Canvas
+        } detail: {
+            // Detail: Main Canvas with Inspector
             MainCanvasView(
                 simulation: viewModel.selectedSimulation,
                 plotViewModel: plotViewModel,
@@ -45,15 +45,13 @@ struct ContentView: View {
                     plotViewModel: plotViewModel
                 )
             }
-
-        } detail: {
-            // Right: Inspector
-            if viewModel.showInspector {
+            .inspector(isPresented: $viewModel.showInspector) {
+                // Inspector (context-dependent: trailing column or sheet)
                 InspectorView(
                     simulation: viewModel.selectedSimulation,
                     plotViewModel: plotViewModel
                 )
-                .navigationSplitViewColumnWidth(min: 250, ideal: 300, max: 500)
+                .inspectorColumnWidth(min: 250, ideal: 300, max: 500)
             }
         }
         .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {

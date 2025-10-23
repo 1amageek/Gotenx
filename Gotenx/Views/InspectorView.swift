@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import GotenxCore
 
 struct InspectorView: View {
     let simulation: Simulation?
@@ -51,8 +52,8 @@ struct PlotInspectorView: View {
 
     var body: some View {
         Form {
-            Section("Animation") {
-                Toggle("Animate", isOn: Binding(
+            Section {
+                Toggle(isOn: Binding(
                     get: { plotViewModel.isAnimating },
                     set: { isOn in
                         if isOn {
@@ -61,40 +62,108 @@ struct PlotInspectorView: View {
                             plotViewModel.stopAnimation()
                         }
                     }
-                ))
+                )) {
+                    HStack {
+                        Image(systemName: plotViewModel.isAnimating ? "play.circle.fill" : "play.circle")
+                            .foregroundStyle(plotViewModel.isAnimating ? .green : .secondary)
+                            .imageScale(.medium)
 
-                if plotViewModel.isAnimating {
-                    VStack(alignment: .leading) {
-                        Text("Speed: \(plotViewModel.animationSpeed, specifier: "%.1f")x")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Slider(value: $plotViewModel.animationSpeed, in: 0.1...5.0, step: 0.1)
+                        Text("Animate")
                     }
                 }
-            }
+                .toggleStyle(.switch)
 
-            Section("Display") {
-                Toggle("Show Legend", isOn: $plotViewModel.showLegend)
-                Toggle("Show Grid", isOn: $plotViewModel.showGrid)
+                if plotViewModel.isAnimating {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Speed")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
 
-                VStack(alignment: .leading) {
-                    Text("Line Width: \(plotViewModel.lineWidth, specifier: "%.1f")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                            Spacer()
 
-                    Slider(value: $plotViewModel.lineWidth, in: 1.0...5.0, step: 0.5)
+                            Text("\(plotViewModel.animationSpeed, specifier: "%.1f")×")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .monospacedDigit()
+                        }
+
+                        Slider(value: $plotViewModel.animationSpeed, in: 0.1...5.0, step: 0.1)
+                            .tint(Color(.systemGreen))
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
+            } header: {
+                Label("Animation", systemImage: "play.rectangle")
             }
 
             Section {
-                Button("Clear Cache") {
+                Toggle(isOn: $plotViewModel.showLegend) {
+                    HStack {
+                        Image(systemName: "list.bullet.rectangle")
+                            .foregroundStyle(.secondary)
+                            .imageScale(.medium)
+
+                        Text("Show Legend")
+                    }
+                }
+
+                Toggle(isOn: $plotViewModel.showGrid) {
+                    HStack {
+                        Image(systemName: "grid")
+                            .foregroundStyle(.secondary)
+                            .imageScale(.medium)
+
+                        Text("Show Grid")
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "lineweight")
+                            .foregroundStyle(.secondary)
+                            .imageScale(.medium)
+
+                        Text("Line Width")
+                            .font(.subheadline)
+
+                        Spacer()
+
+                        Text("\(plotViewModel.lineWidth, specifier: "%.1f") pt")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+
+                    Slider(value: $plotViewModel.lineWidth, in: 1.0...5.0, step: 0.5)
+                        .tint(Color(.systemBlue))
+                }
+            } header: {
+                Label("Display Options", systemImage: "eye")
+            }
+
+            Section {
+                Button {
                     plotViewModel.clearCache()
+                } label: {
+                    HStack {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.red)
+
+                        Text("Clear Cache")
+                            .foregroundStyle(.primary)
+
+                        Spacer()
+                    }
                 }
                 .buttonStyle(.glass)
+            } header: {
+                Label("Data Management", systemImage: "folder")
             }
         }
         .scrollContentBackground(.hidden)
+        .animation(.easeInOut(duration: 0.3), value: plotViewModel.isAnimating)
     }
 }
 
@@ -104,41 +173,137 @@ struct DataInspectorView: View {
     var body: some View {
         if let simulation = simulation {
             Form {
-                Section("Simulation Info") {
-                    LabeledContent("Name", value: simulation.name)
-                    LabeledContent("Status", value: simulation.status.displayText)
-                    LabeledContent("Created", value: simulation.createdAt.formatted(date: .numeric, time: .shortened))
+                Section {
+                    LabeledContent {
+                        Text(simulation.name)
+                            .fontWeight(.medium)
+                    } label: {
+                        HStack {
+                            Image(systemName: "text.cursor")
+                                .foregroundStyle(.secondary)
+                            Text("Name")
+                        }
+                    }
+
+                    LabeledContent {
+                        Text(simulation.status.displayText)
+                            .fontWeight(.medium)
+                    } label: {
+                        HStack {
+                            Image(systemName: "circle.fill")
+                                .foregroundStyle(statusColor(for: simulation.status))
+                                .imageScale(.small)
+                            Text("Status")
+                        }
+                    }
+
+                    LabeledContent {
+                        Text(simulation.createdAt.formatted(date: .numeric, time: .shortened))
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    } label: {
+                        HStack {
+                            Image(systemName: "clock")
+                                .foregroundStyle(.secondary)
+                            Text("Created")
+                        }
+                    }
+                } header: {
+                    Label("Simulation Info", systemImage: "info.circle")
                 }
 
-                Section("Snapshots") {
-                    LabeledContent("Count", value: "\(simulation.snapshotMetadata.count)")
+                Section {
+                    LabeledContent {
+                        Text("\(simulation.snapshotMetadata.count)")
+                            .fontWeight(.semibold)
+                            .monospacedDigit()
+                    } label: {
+                        HStack {
+                            Image(systemName: "camera")
+                                .foregroundStyle(.secondary)
+                            Text("Snapshots")
+                        }
+                    }
 
                     if let first = simulation.snapshotMetadata.first,
                        let last = simulation.snapshotMetadata.last {
-                        LabeledContent("Time Range", value: "\(first.time, specifier: "%.3f") - \(last.time, specifier: "%.3f") s")
+                        LabeledContent {
+                            Text("\(first.time, specifier: "%.3f") - \(last.time, specifier: "%.3f") s")
+                                .fontWeight(.medium)
+                                .monospacedDigit()
+                        } label: {
+                            HStack {
+                                Image(systemName: "timer")
+                                    .foregroundStyle(.secondary)
+                                Text("Time Range")
+                            }
+                        }
                     }
+                } header: {
+                    Label("Data Summary", systemImage: "chart.bar.doc.horizontal")
                 }
 
                 if let metadata = simulation.snapshotMetadata.last {
-                    Section("Final State") {
-                        LabeledContent("Core Ti", value: "\(metadata.coreTi, specifier: "%.2f") keV")
-                        LabeledContent("Edge Ti", value: "\(metadata.edgeTi, specifier: "%.2f") keV")
-                        LabeledContent("Avg ne", value: "\(metadata.avgNe, specifier: "%.2f") ×10²⁰ m⁻³")
-                        LabeledContent("Peak ne", value: "\(metadata.peakNe, specifier: "%.2f") ×10²⁰ m⁻³")
+                    Section {
+                        LabeledContent("Core Ti") {
+                            Text("\(metadata.coreTi, specifier: "%.2f") keV")
+                                .fontWeight(.medium)
+                                .monospacedDigit()
+                        }
+
+                        LabeledContent("Edge Ti") {
+                            Text("\(metadata.edgeTi, specifier: "%.2f") keV")
+                                .fontWeight(.medium)
+                                .monospacedDigit()
+                        }
+
+                        LabeledContent("Avg ne") {
+                            Text("\(metadata.avgNe, specifier: "%.2f") ×10²⁰ m⁻³")
+                                .fontWeight(.medium)
+                                .monospacedDigit()
+                        }
+
+                        LabeledContent("Peak ne") {
+                            Text("\(metadata.peakNe, specifier: "%.2f") ×10²⁰ m⁻³")
+                                .fontWeight(.medium)
+                                .monospacedDigit()
+                        }
 
                         if let Ip = metadata.plasmaCurrentMA {
-                            LabeledContent("Plasma Current", value: "\(Ip, specifier: "%.2f") MA")
+                            LabeledContent("Plasma Current") {
+                                Text("\(Ip, specifier: "%.2f") MA")
+                                    .fontWeight(.medium)
+                                    .monospacedDigit()
+                            }
                         }
 
                         if let Q = metadata.fusionGainQ {
-                            LabeledContent("Fusion Gain Q", value: "\(Q, specifier: "%.2f")")
+                            LabeledContent("Fusion Gain Q") {
+                                Text("\(Q, specifier: "%.2f")")
+                                    .fontWeight(.medium)
+                                    .monospacedDigit()
+                            }
                         }
+                    } header: {
+                        Label("Final State", systemImage: "flag.checkered")
                     }
                 }
             }
             .scrollContentBackground(.hidden)
         } else {
             PlaceholderView(message: "No simulation selected")
+        }
+    }
+
+    private func statusColor(for status: SimulationStatusEnum) -> Color {
+        switch status {
+        case .draft: return .gray
+        case .queued: return .yellow
+        case .running: return .green
+        case .paused: return .orange
+        case .completed: return .blue
+        case .failed: return .red
+        case .cancelled: return .gray
         }
     }
 }
@@ -152,28 +317,100 @@ struct ConfigInspectorView: View {
            let config = try? JSONDecoder().decode(SimulationConfiguration.self, from: configData) {
 
             Form {
-                Section("Time") {
-                    LabeledContent("Start", value: "\(config.time.start) s")
-                    LabeledContent("End", value: "\(config.time.end) s")
-                    LabeledContent("Initial Δt", value: "\(config.time.initialDt) s")
-                }
-
-                Section("Mesh") {
-                    LabeledContent("Cells", value: "\(config.runtime.static.mesh.nCells)")
-                    LabeledContent("Major Radius", value: "\(config.runtime.static.mesh.majorRadius) m")
-                    LabeledContent("Minor Radius", value: "\(config.runtime.static.mesh.minorRadius) m")
-                    LabeledContent("Toroidal Field", value: "\(config.runtime.static.mesh.toroidalField) T")
-                }
-
-                Section("Transport") {
-                    LabeledContent("Model", value: config.runtime.dynamic.transport.modelType.rawValue)
-                }
-
-                Section("Output") {
-                    if let interval = config.output.saveInterval {
-                        LabeledContent("Save Interval", value: "\(interval) s")
+                Section {
+                    LabeledContent {
+                        Text("\(config.time.start, specifier: "%.3f") s")
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    } label: {
+                        Text("Start")
                     }
-                    LabeledContent("Format", value: config.output.format.rawValue)
+
+                    LabeledContent {
+                        Text("\(config.time.end, specifier: "%.3f") s")
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    } label: {
+                        Text("End")
+                    }
+
+                    LabeledContent {
+                        Text("\(config.time.initialDt, specifier: "%.1e") s")
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    } label: {
+                        Text("Initial Δt")
+                    }
+                } header: {
+                    Label("Time Configuration", systemImage: "clock.arrow.circlepath")
+                }
+
+                Section {
+                    LabeledContent {
+                        Text("\(config.runtime.static.mesh.nCells)")
+                            .fontWeight(.semibold)
+                            .monospacedDigit()
+                    } label: {
+                        Text("Cells")
+                    }
+
+                    LabeledContent {
+                        Text("\(config.runtime.static.mesh.majorRadius, specifier: "%.2f") m")
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    } label: {
+                        Text("Major Radius")
+                    }
+
+                    LabeledContent {
+                        Text("\(config.runtime.static.mesh.minorRadius, specifier: "%.2f") m")
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    } label: {
+                        Text("Minor Radius")
+                    }
+
+                    LabeledContent {
+                        Text("\(config.runtime.static.mesh.toroidalField, specifier: "%.2f") T")
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    } label: {
+                        Text("Toroidal Field")
+                    }
+                } header: {
+                    Label("Mesh Parameters", systemImage: "grid.circle")
+                }
+
+                Section {
+                    LabeledContent {
+                        Text(config.runtime.dynamic.transport.modelType.rawValue)
+                            .fontWeight(.medium)
+                    } label: {
+                        Text("Model")
+                    }
+                } header: {
+                    Label("Transport", systemImage: "arrow.triangle.swap")
+                }
+
+                Section {
+                    if let interval = config.output.saveInterval {
+                        LabeledContent {
+                            Text("\(interval, specifier: "%.3f") s")
+                                .fontWeight(.medium)
+                                .monospacedDigit()
+                        } label: {
+                            Text("Save Interval")
+                        }
+                    }
+
+                    LabeledContent {
+                        Text(config.output.format.rawValue.uppercased())
+                            .fontWeight(.medium)
+                    } label: {
+                        Text("Format")
+                    }
+                } header: {
+                    Label("Output Settings", systemImage: "doc.badge.gearshape")
                 }
             }
             .scrollContentBackground(.hidden)
