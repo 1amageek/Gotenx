@@ -16,7 +16,7 @@ struct ToolbarView: ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
             if let simulation = viewModel.selectedSimulation {
 
-                GlassEffectContainer {
+                Group {
                     if viewModel.isSimulationRunning {
                         Button {
                             if viewModel.isPaused {
@@ -30,25 +30,23 @@ struct ToolbarView: ToolbarContent {
                                 systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
                             )
                         }
-                        .buttonStyle(.glass)
 
                         Button {
                             viewModel.stopSimulation()
                         } label: {
                             Label("Stop", systemImage: "stop.fill")
                         }
-                        .buttonStyle(.glass)
+
                     } else {
                         Button {
                             viewModel.runSimulation(simulation)
                         } label: {
                             Label("Run", systemImage: "play.fill")
                         }
-                        .buttonStyle(.glassProminent)
                         .disabled(viewModel.isSimulationRunning || simulation.status.isRunning)
                     }
                 }
-                .controlSize(.regular)
+
             }
         }
 

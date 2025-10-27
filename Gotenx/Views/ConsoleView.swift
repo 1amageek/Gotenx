@@ -7,6 +7,7 @@
 
 import SwiftUI
 import GotenxUI
+import AppKit
 
 struct ConsoleView: View {
     @Bindable var logViewModel: LogViewModel
@@ -15,6 +16,13 @@ struct ConsoleView: View {
     let totalTime: Float
     let isRunning: Bool
     @State private var hoveredEntry: UUID?
+    @State private var displayMode: DisplayMode = .structured
+    @State private var showCopySuccess: Bool = false
+
+    enum DisplayMode {
+        case structured  // Individual rows with hover effects
+        case plainText   // Single text block, easy to copy
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,29 +32,40 @@ struct ConsoleView: View {
                 plotViewModel: plotViewModel,
                 currentTime: currentTime,
                 totalTime: totalTime,
-                isRunning: isRunning
+                isRunning: isRunning,
+                displayMode: $displayMode,
+                showCopySuccess: $showCopySuccess
             )
 
             Divider()
 
-            // Log entries
+            // Log entries - display based on mode
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(logViewModel.filteredEntries) { entry in
-                            LogEntryRow(
-                                entry: entry,
-                                isHovered: hoveredEntry == entry.id
-                            )
-                            .id(entry.id)
-                            .onHover { hovering in
-                                hoveredEntry = hovering ? entry.id : nil
+                    if displayMode == .structured {
+                        // Structured view with individual rows
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(logViewModel.filteredEntries) { entry in
+                                LogEntryRow(
+                                    entry: entry,
+                                    isHovered: hoveredEntry == entry.id
+                                )
+                                .id(entry.id)
+                                .onHover { hovering in
+                                    hoveredEntry = hovering ? entry.id : nil
+                                }
                             }
                         }
+                    } else {
+                        // Plain text view - easy to copy
+                        Text(formattedLogsText)
+                            .font(.system(.caption, design: .monospaced))
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
                     }
                 }
                 .font(.system(.caption, design: .monospaced))
-                .textSelection(.enabled)
                 .background(Color(nsColor: .textBackgroundColor))
                 // Monitor last entry ID instead of count (detects replacements)
                 .onChange(of: logViewModel.entries.last?.id) { _, _ in
@@ -60,6 +79,32 @@ struct ConsoleView: View {
             }
         }
         .background(.ultraThinMaterial)
+        .overlay(alignment: .topTrailing) {
+            // Copy success indicator
+            if showCopySuccess {
+                Text("Copied!")
+                    .font(.caption)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.green.opacity(0.8))
+                    .foregroundStyle(.white)
+                    .cornerRadius(6)
+                    .padding(12)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+    }
+
+    /// Format all filtered logs as plain text
+    private var formattedLogsText: String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH:mm:ss.SSS"
+
+        return logViewModel.filteredEntries.map { entry in
+            let timestamp = dateFormatter.string(from: entry.timestamp)
+            let levelIcon = entry.level.icon
+            return "[\(timestamp)] \(levelIcon) [\(entry.category)] \(entry.message)"
+        }.joined(separator: "\n")
     }
 }
 
@@ -69,6 +114,8 @@ struct ConsoleToolbar: View {
     let currentTime: Float
     let totalTime: Float
     let isRunning: Bool
+    @Binding var displayMode: ConsoleView.DisplayMode
+    @Binding var showCopySuccess: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -172,6 +219,28 @@ struct ConsoleToolbar: View {
             Divider()
                 .frame(height: 20)
 
+            // Display mode toggle
+            Button {
+                displayMode = displayMode == .structured ? .plainText : .structured
+            } label: {
+                Image(systemName: displayMode == .structured ? "list.bullet" : "doc.plaintext")
+            }
+            .buttonStyle(.borderless)
+            .help(displayMode == .structured ? "Switch to plain text mode" : "Switch to structured mode")
+
+            // Copy all logs button
+            Button {
+                copyAllLogs()
+            } label: {
+                Image(systemName: "doc.on.doc")
+            }
+            .buttonStyle(.borderless)
+            .help("Copy all logs to clipboard")
+            .disabled(logViewModel.filteredEntries.isEmpty)
+
+            Divider()
+                .frame(height: 20)
+
             // Auto-scroll toggle
             Toggle(isOn: $logViewModel.autoScroll) {
                 Image(systemName: "arrow.down.to.line")
@@ -192,6 +261,38 @@ struct ConsoleToolbar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// Copy all filtered logs to clipboard
+    private func copyAllLogs() {
+        // Format filtered entries
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+
+        let text = logViewModel.filteredEntries.map { entry in
+            let timestamp = dateFormatter.string(from: entry.timestamp)
+            return "[\(timestamp)] [\(entry.level.rawValue)] [\(entry.category)] \(entry.message)"
+        }.joined(separator: "\n")
+
+        // Copy to clipboard
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        // Show success indicator
+        withAnimation {
+            showCopySuccess = true
+        }
+
+        // Hide after 2 seconds
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            await MainActor.run {
+                withAnimation {
+                    showCopySuccess = false
+                }
+            }
+        }
     }
 
     private func levelCount(_ level: LogEntry.LogLevel) -> Int {

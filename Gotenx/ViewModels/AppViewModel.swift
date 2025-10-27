@@ -46,13 +46,14 @@ final class AppViewModel {
     var errorMessage: String?
 
     // Logging
-    var logViewModel: LogViewModel = LogViewModel()
+    var logViewModel: LogViewModel
 
     // Model context (injected from view)
     weak var modelContext: ModelContext?
 
-    init(workspace: Workspace) {
+    init(workspace: Workspace, logViewModel: LogViewModel) {
         self.workspace = workspace
+        self.logViewModel = logViewModel
     }
 
     // MARK: - Simulation Operations
@@ -238,11 +239,21 @@ final class AppViewModel {
                             self.lastUpdateTime = now
                         }
 
-                        // Log every 10%
+                        // ✅ ENHANCED: Log every step with detailed info (using logAsync for performance)
+                        let convergedIcon = progressInfo.converged ? "✓" : "⚠"
+                        let progressPercent = Int(fraction * 100)
+
+                        self.logViewModel.logAsync(
+                            "\(convergedIcon) Step \(progressInfo.totalSteps) | t = \(String(format: "%.4e", progressInfo.currentTime))s | dt = \(String(format: "%.2e", progressInfo.lastDt))s | \(progressPercent)%",
+                            level: .debug,
+                            category: "Progress"
+                        )
+
+                        // Also log major milestones at info level
                         if fraction.truncatingRemainder(dividingBy: 0.1) < 0.01 {
                             self.logViewModel.log(
-                                "Progress: \(Int(fraction * 100))% | t = \(String(format: "%.3f", progressInfo.currentTime))s | dt = \(String(format: "%.4f", progressInfo.lastDt))s",
-                                level: .debug,
+                                "Progress: \(progressPercent)% complete | \(progressInfo.totalSteps) steps | t = \(String(format: "%.3f", progressInfo.currentTime))s",
+                                level: .info,
                                 category: "Simulation"
                             )
                         }

@@ -85,7 +85,7 @@ enum ConfigurationPreset: String, CaseIterable, Identifiable {
                     minDtFraction: nil,      // minDtを明示的に指定
                     maxDt: 1e-3,             // 最大dt（Phase 0）
                     safetyFactor: 0.9,       // CFL安全係数（0.9 = 保守的）
-                    maxTimestepGrowth: 1.2   // （注：現在未使用、将来の拡張用）
+                    maxTimestepGrowth: 1.1   // ✅ UPDATED: 1.2 → 1.1 (10% growth, more conservative)
                 )
 
                 // 🐛 DEBUG: Configuration being set in SimulationPresets
