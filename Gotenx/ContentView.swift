@@ -40,7 +40,9 @@ struct ContentView: View {
                 logViewModel: viewModel.logViewModel,
                 isRunning: viewModel.isSimulationRunning,
                 currentSimulationTime: viewModel.currentSimulationTime,
-                totalSimulationTime: viewModel.totalSimulationTime
+                totalSimulationTime: viewModel.totalSimulationTime,
+                liveProfiles: viewModel.liveProfiles,
+                liveDerived: viewModel.liveDerived
             )
             .toolbar {
                 ToolbarView(

@@ -15,36 +15,40 @@ struct ToolbarView: ToolbarContent {
         // Left: Simulation controls
         ToolbarItemGroup(placement: .navigation) {
             if let simulation = viewModel.selectedSimulation {
-                Button {
-                    viewModel.runSimulation(simulation)
-                } label: {
-                    Label("Run", systemImage: "play.fill")
-                }
-                .buttonStyle(.glassProminent)
-                .disabled(viewModel.isSimulationRunning || simulation.status.isRunning)
 
-                if viewModel.isSimulationRunning {
-                    Button {
-                        if viewModel.isPaused {
-                            viewModel.resumeSimulation()
-                        } else {
-                            viewModel.pauseSimulation()
+                GlassEffectContainer {
+                    if viewModel.isSimulationRunning {
+                        Button {
+                            if viewModel.isPaused {
+                                viewModel.resumeSimulation()
+                            } else {
+                                viewModel.pauseSimulation()
+                            }
+                        } label: {
+                            Label(
+                                viewModel.isPaused ? "Resume" : "Pause",
+                                systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
+                            )
                         }
-                    } label: {
-                        Label(
-                            viewModel.isPaused ? "Resume" : "Pause",
-                            systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
-                        )
-                    }
-                    .buttonStyle(.glass)
+                        .buttonStyle(.glass)
 
-                    Button {
-                        viewModel.stopSimulation()
-                    } label: {
-                        Label("Stop", systemImage: "stop.fill")
+                        Button {
+                            viewModel.stopSimulation()
+                        } label: {
+                            Label("Stop", systemImage: "stop.fill")
+                        }
+                        .buttonStyle(.glass)
+                    } else {
+                        Button {
+                            viewModel.runSimulation(simulation)
+                        } label: {
+                            Label("Run", systemImage: "play.fill")
+                        }
+                        .buttonStyle(.glassProminent)
+                        .disabled(viewModel.isSimulationRunning || simulation.status.isRunning)
                     }
-                    .buttonStyle(.glass)
                 }
+                .controlSize(.regular)
             }
         }
 
@@ -87,13 +91,6 @@ struct ToolbarView: ToolbarContent {
 
         // Right: View controls
         ToolbarItemGroup(placement: .automatic) {
-            Button {
-                viewModel.showSidebar.toggle()
-            } label: {
-                Label("Toggle Sidebar", systemImage: "sidebar.left")
-            }
-            .buttonStyle(.glass)
-
             Button {
                 viewModel.showInspector.toggle()
             } label: {

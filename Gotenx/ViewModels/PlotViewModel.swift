@@ -49,8 +49,14 @@ final class PlotViewModel {
             let dataStore = try SimulationDataStore()
             let result = try await dataStore.loadSimulationResult(simulationID: simulation.id)
 
+            // 🐛 DEBUG: Log loaded result
+            print("[DEBUG-PlotViewModel] Loaded result: timeSeries=\(result.timeSeries?.count ?? 0) points")
+
             // Use GotenxUI's built-in conversion
             let plotData = try PlotData(from: result)
+
+            // 🐛 DEBUG: Log plotData
+            print("[DEBUG-PlotViewModel] PlotData created: nTime=\(plotData.nTime), nCells=\(plotData.nCells)")
 
             // Update cache
             if cachedPlotData.count >= cacheLimit {
@@ -104,6 +110,33 @@ final class PlotViewModel {
     func clearCache() {
         cachedPlotData.removeAll()
         logger.debug("Cleared plot data cache")
+    }
+
+    // MARK: - Live Plotting (Phase 1b)
+
+    /// Update plots with live profiles during simulation
+    /// Note: This is a placeholder for future implementation
+    /// Currently, live profiles are stored in AppViewModel.liveProfiles
+    /// and can be accessed directly from views
+    func updateLiveProfiles(_ profiles: SerializableProfiles) {
+        // TODO: Implement live plot updates
+        // This would require extending PlotData to support incremental updates
+        // or creating a separate LivePlotData structure
+
+        // For now, live profiles are accessible via AppViewModel.liveProfiles
+        logger.debug("Live profiles update received (placeholder)")
+    }
+
+    /// Update derived quantities during simulation
+    /// Note: This is a placeholder for future implementation
+    /// Currently, derived quantities are stored in AppViewModel.liveDerived
+    /// and can be accessed directly from views
+    func updateDerivedQuantities(_ derived: DerivedQuantities) {
+        // TODO: Implement live metrics updates
+        // This could update a separate metrics panel or overlay
+
+        // For now, derived quantities are accessible via AppViewModel.liveDerived
+        logger.debug("Derived quantities update received (placeholder)")
     }
 }
 

@@ -393,6 +393,42 @@ struct ConfigInspectorView: View {
                 }
 
                 Section {
+                    LabeledContent {
+                        Text("\(config.runtime.static.solver.maxIterations)")
+                            .fontWeight(.semibold)
+                            .monospacedDigit()
+                    } label: {
+                        Text("Max Iterations")
+                    }
+
+                    LabeledContent {
+                        let tol = config.runtime.static.solver.effectiveTolerances
+                        let relTol = tol.ionTemperature.relativeTolerance
+                        return Text("\(relTol, specifier: "%.1e") (relative)")
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    } label: {
+                        Text("Tolerance")
+                    }
+
+                    if config.runtime.static.solver.lineSearchEnabled {
+                        LabeledContent {
+                            Text("Enabled")
+                                .fontWeight(.medium)
+                                .foregroundStyle(.green)
+                        } label: {
+                            Text("Line Search")
+                        }
+                    }
+                } header: {
+                    Label("Solver Settings", systemImage: "function")
+                } footer: {
+                    Text("Per-equation tolerances: Ti/Te=10eV, ne=1e17m⁻³, ψ=1mWb absolute")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section {
                     if let interval = config.output.saveInterval {
                         LabeledContent {
                             Text("\(interval, specifier: "%.3f") s")

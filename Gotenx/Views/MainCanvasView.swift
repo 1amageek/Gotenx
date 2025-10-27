@@ -8,6 +8,7 @@
 import SwiftUI
 import Charts
 import GotenxUI
+import GotenxCore
 
 struct MainCanvasView: View {
     let simulation: Simulation?
@@ -16,6 +17,8 @@ struct MainCanvasView: View {
     let isRunning: Bool
     let currentSimulationTime: Float
     let totalSimulationTime: Float
+    let liveProfiles: SerializableProfiles?
+    let liveDerived: DerivedQuantities?
 
     @State private var splitRatio: CGFloat = 0.7
     @State private var isDraggingSplitter = false
@@ -57,8 +60,32 @@ struct MainCanvasView: View {
                                         await plotViewModel.loadPlotData(for: simulation)
                                     }
                             case .running:
-                                PlaceholderView(message: "Simulation running...", showSpinner: false)
-                                    .frame(height: 500)
+                                if let liveProfiles = liveProfiles {
+                                    // 🐛 DEBUG: Log live profiles data
+                                    let _ = print("[DEBUG-MainCanvas] liveProfiles received: Ti=\(liveProfiles.ionTemperature.first ?? -1)...\(liveProfiles.ionTemperature.last ?? -1) eV, ne=\(liveProfiles.electronDensity.first ?? -1)...\(liveProfiles.electronDensity.last ?? -1) m^-3, nCells=\(liveProfiles.ionTemperature.count)")
+
+                                    // Show real-time charts during simulation
+                                    LiveTemperaturePlotView(
+                                        profiles: liveProfiles,
+                                        time: currentSimulationTime,
+                                        showLegend: plotViewModel.showLegend,
+                                        showGrid: plotViewModel.showGrid,
+                                        lineWidth: plotViewModel.lineWidth
+                                    )
+                                    .frame(height: 400)
+
+                                    LiveDensityPlotView(
+                                        profiles: liveProfiles,
+                                        time: currentSimulationTime,
+                                        showLegend: plotViewModel.showLegend,
+                                        showGrid: plotViewModel.showGrid,
+                                        lineWidth: plotViewModel.lineWidth
+                                    )
+                                    .frame(height: 400)
+                                } else {
+                                    PlaceholderView(message: "Simulation running...", showSpinner: false)
+                                        .frame(height: 500)
+                                }
                             case .paused:
                                 PlaceholderView(message: "Simulation paused", showSpinner: false)
                                     .frame(height: 500)
@@ -457,6 +484,241 @@ struct CustomLegend: View {
         .background {
             RoundedRectangle(cornerRadius: 8)
                 .fill(.ultraThinMaterial)
+        }
+    }
+}
+
+// MARK: - Live Plot Views (Real-time during simulation)
+
+struct LiveTemperaturePlotView: View {
+    let profiles: SerializableProfiles
+    let time: Float
+    let showLegend: Bool
+    let showGrid: Bool
+    let lineWidth: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Temperature Profiles (Live)")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    Text("t = \(time, specifier: "%.3f") s")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if showLegend {
+                    CustomLegend(items: [
+                        ("Ion Temperature", Color(red: 1.0, green: 0.3, blue: 0.3)),
+                        ("Electron Temperature", Color(red: 0.3, green: 0.6, blue: 1.0))
+                    ])
+                }
+            }
+
+            // Generate normalized radial coordinate
+            let nCells = profiles.ionTemperature.count
+            let rho = (0..<nCells).map { Float($0) / Float(nCells - 1) }
+
+            // Convert temperature from eV to keV
+            let Ti_keV = profiles.ionTemperature.map { $0 / 1000.0 }
+            let Te_keV = profiles.electronTemperature.map { $0 / 1000.0 }
+
+            Chart {
+                // Ion temperature - Area + Line
+                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                    AreaMark(
+                        x: .value("ρ", r),
+                        yStart: .value("Zero", 0),
+                        yEnd: .value("Ti", Ti_keV[index])
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 1.0, green: 0.3, blue: 0.3).opacity(0.3),
+                                Color(red: 1.0, green: 0.3, blue: 0.3).opacity(0.1)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.catmullRom)
+                }
+
+                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                    LineMark(
+                        x: .value("ρ", r),
+                        y: .value("Ti", Ti_keV[index])
+                    )
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                    .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+                    .interpolationMethod(.catmullRom)
+                }
+
+                // Electron temperature - Area + Line
+                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                    AreaMark(
+                        x: .value("ρ", r),
+                        yStart: .value("Zero", 0),
+                        yEnd: .value("Te", Te_keV[index])
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.3, green: 0.6, blue: 1.0).opacity(0.3),
+                                Color(red: 0.3, green: 0.6, blue: 1.0).opacity(0.1)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.catmullRom)
+                }
+
+                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                    LineMark(
+                        x: .value("ρ", r),
+                        y: .value("Te", Te_keV[index])
+                    )
+                    .foregroundStyle(Color(red: 0.3, green: 0.6, blue: 1.0))
+                    .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+                    .interpolationMethod(.catmullRom)
+                }
+            }
+            .chartXAxis {
+                AxisMarks(position: .bottom) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: showGrid ? 0.5 : 0))
+                        .foregroundStyle(.quaternary)
+                    AxisTick()
+                    AxisValueLabel()
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: showGrid ? 0.5 : 0))
+                        .foregroundStyle(.quaternary)
+                    AxisTick()
+                    AxisValueLabel()
+                }
+            }
+            .chartXAxisLabel("Normalized Radius ρ", alignment: .center)
+            .chartYAxisLabel("Temperature [keV]", alignment: .center)
+            .chartPlotStyle { plotArea in
+                plotArea
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(12)
+            }
+        }
+        .padding(20)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.thinMaterial)
+                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+        }
+    }
+}
+
+struct LiveDensityPlotView: View {
+    let profiles: SerializableProfiles
+    let time: Float
+    let showLegend: Bool
+    let showGrid: Bool
+    let lineWidth: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Electron Density Profile (Live)")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    Text("t = \(time, specifier: "%.3f") s")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if showLegend {
+                    CustomLegend(items: [
+                        ("Electron Density", Color(red: 0.2, green: 0.8, blue: 0.4))
+                    ])
+                }
+            }
+
+            // Generate normalized radial coordinate
+            let nCells = profiles.electronDensity.count
+            let rho = (0..<nCells).map { Float($0) / Float(nCells - 1) }
+
+            // Convert density from m^-3 to 10^20 m^-3
+            let ne_normalized = profiles.electronDensity.map { $0 / 1e20 }
+
+            Chart {
+                // Area fill
+                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                    AreaMark(
+                        x: .value("ρ", r),
+                        yStart: .value("Zero", 0),
+                        yEnd: .value("ne", ne_normalized[index])
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.2, green: 0.8, blue: 0.4).opacity(0.3),
+                                Color(red: 0.2, green: 0.8, blue: 0.4).opacity(0.1)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.catmullRom)
+                }
+
+                // Line
+                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                    LineMark(
+                        x: .value("ρ", r),
+                        y: .value("ne", ne_normalized[index])
+                    )
+                    .foregroundStyle(Color(red: 0.2, green: 0.8, blue: 0.4))
+                    .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+                    .interpolationMethod(.catmullRom)
+                }
+            }
+            .chartXAxis {
+                AxisMarks(position: .bottom) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: showGrid ? 0.5 : 0))
+                        .foregroundStyle(.quaternary)
+                    AxisTick()
+                    AxisValueLabel()
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: showGrid ? 0.5 : 0))
+                        .foregroundStyle(.quaternary)
+                    AxisTick()
+                    AxisValueLabel()
+                }
+            }
+            .chartXAxisLabel("Normalized Radius ρ", alignment: .center)
+            .chartYAxisLabel("Density [10²⁰ m⁻³]", alignment: .center)
+            .chartPlotStyle { plotArea in
+                plotArea
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(12)
+            }
+        }
+        .padding(20)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.thinMaterial)
+                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
         }
     }
 }

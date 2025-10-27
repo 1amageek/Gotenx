@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import Observation
 import GotenxCore
+import GotenxPhysics  // ✅ FIXED: For SourceModelFactory, MHDModelFactory
 import OSLog
 
 private let logger = Logger(subsystem: "com.gotenx.app", category: "simulation")
@@ -24,6 +25,8 @@ final class AppViewModel {
 
     // Simulation execution
     private var simulationTask: Task<Void, Error>?
+    private var currentRunner: SimulationRunner?  // ✅ NEW: For pause/resume support
+    private var pauseResumeTask: Task<Void, Never>?  // ✅ NEW: Track pause/resume operations
     private var dataStore: SimulationDataStore?
     var isSimulationRunning: Bool = false
     var isPaused: Bool = false
@@ -100,7 +103,12 @@ final class AppViewModel {
                 // Always clean up task state (runs even if Task is cancelled)
                 Task { @MainActor in
                     isSimulationRunning = false
+                    currentRunner = nil
                     simulationTask = nil
+                    pauseResumeTask?.cancel()  // ✅ FIXED: Cancel any pending pause/resume
+                    pauseResumeTask = nil
+                    liveProfiles = nil  // ✅ FIXED: Clear live data
+                    liveDerived = nil   // ✅ FIXED: Clear derived quantities
                     logViewModel.log("Simulation task cleanup completed", level: .debug, category: "Simulation")
                 }
             }
@@ -109,6 +117,30 @@ final class AppViewModel {
                 // Decode configuration
                 logViewModel.log("Decoding configuration...", level: .debug, category: "Config")
                 let config = try JSONDecoder().decode(SimulationConfiguration.self, from: configData)
+
+                // ✅ NEW: Validate configuration before running simulation
+                logViewModel.log("Validating configuration...", level: .debug, category: "Config")
+                do {
+                    try ConfigurationValidator.validate(config)
+                    logViewModel.log("✓ Configuration validation passed", level: .info, category: "Config")
+                } catch let error as ConfigurationValidationError {
+                    // Critical error - abort simulation
+                    logViewModel.log("✗ Configuration validation failed: \(error.localizedDescription)", level: .error, category: "Config")
+                    throw error
+                } catch {
+                    // Unexpected error during validation
+                    logViewModel.log("✗ Unexpected validation error: \(error.localizedDescription)", level: .error, category: "Config")
+                    throw error
+                }
+
+                // Collect and display warnings
+                let warnings = ConfigurationValidator.collectWarnings(config)
+                if !warnings.isEmpty {
+                    logViewModel.log("⚠️  Configuration has \(warnings.count) warning(s):", level: .warning, category: "Config")
+                    for warning in warnings {
+                        logViewModel.log("  • \(warning.localizedDescription)", level: .warning, category: "Config")
+                    }
+                }
 
                 await MainActor.run {
                     isSimulationRunning = true
@@ -119,49 +151,116 @@ final class AppViewModel {
                     lastUpdateTime = .distantPast
                 }
 
-                logViewModel.log("Simulation initialized (duration: \(config.time.end)s, cells: 100)", level: .info, category: "Simulation")
+                logViewModel.log("Simulation initialized (duration: \(config.time.end)s)", level: .info, category: "Simulation")
+
+                // ✅ NEW: Create SimulationRunner directly
+                let runner = SimulationRunner(config: config)
+                await MainActor.run {
+                    self.currentRunner = runner  // Store for pause/resume
+                }
+
+                // ✅ NEW: Initialize models (with all required parameters)
+                logViewModel.log("Initializing physics models...", level: .debug, category: "Simulation")
+
+                let transportModel = try TransportModelFactory.create(
+                    config: config.runtime.dynamic.transport
+                )
+
+                // ⚠️ Breaking Change: Now throws
+                // Note: SourceModelFactory.create() returns a single composite model
+
+                // 🐛 DEBUG: Check sources configuration
+                let sourcesConfig = config.runtime.dynamic.sources
+                print("[DEBUG-SOURCES] ohmicHeating: \(sourcesConfig.ohmicHeating)")
+                print("[DEBUG-SOURCES] fusionPower: \(sourcesConfig.fusionPower)")
+                print("[DEBUG-SOURCES] ionElectronExchange: \(sourcesConfig.ionElectronExchange)")
+                print("[DEBUG-SOURCES] bremsstrahlung: \(sourcesConfig.bremsstrahlung)")
+                print("[DEBUG-SOURCES] ecrh: \(sourcesConfig.ecrh != nil ? "YES (power=\(sourcesConfig.ecrh!.totalPower)W)" : "NO")")
+                print("[DEBUG-SOURCES] gasPuff: \(sourcesConfig.gasPuff != nil ? "YES" : "NO")")
+
+                let sourceModel = try SourceModelFactory.create(
+                    config: config.runtime.dynamic.sources
+                )
+
+                let mhdModels = MHDModelFactory.createAllModels(
+                    config: config.runtime.dynamic.mhd
+                )
+
+                // ✅ FIXED: Wrap sourceModel in array (initialize expects [any SourceModel])
+                try await runner.initialize(
+                    transportModel: transportModel,
+                    sourceModels: [sourceModel],
+                    mhdModels: mhdModels
+                )
+
+                logViewModel.log("Models initialized", level: .debug, category: "Simulation")
 
                 // Get data store
                 logViewModel.log("Initializing data store...", level: .debug, category: "Storage")
                 let store = try getDataStore()
 
-                // Create default initial profiles
-                // Note: This is a simplified version - in production, you would:
-                // 1. Convert SimulationConfiguration to RuntimeParams (requires swift-gotenx updates)
-                // 2. Get proper initial conditions
-                logViewModel.log("Creating initial profiles...", level: .debug, category: "Simulation")
-                let initialProfiles = createDefaultProfiles(nCells: 100)
+                // ✅ NEW: Run actual simulation with progress callback
+                logViewModel.log("Starting physics calculation...", level: .info, category: "Simulation")
 
-                // For now, we'll create a minimal result since we can't actually run the orchestrator
-                // without the proper RuntimeParams conversion
-                logger.warning("Simulation execution not yet implemented - creating placeholder result")
-                logViewModel.log("⚠ Using placeholder execution (orchestrator not yet integrated)", level: .warning, category: "Simulation")
+                let result = try await runner.run { [weak self] fraction, progressInfo in
+                    guard let self = self else {
+                        print("[DEBUG] progressCallback: self is nil")
+                        return
+                    }
 
-                // Create placeholder result
-                let result = SimulationResult(
-                    finalProfiles: initialProfiles,
-                    statistics: SimulationStatistics(
-                        totalIterations: 0,
-                        totalSteps: 0,
-                        converged: true,
-                        maxResidualNorm: 0.0,
-                        wallTime: 0.0
-                    ),
-                    timeSeries: [
-                        TimePoint(
-                            time: 0.0,
-                            profiles: initialProfiles,
-                            derived: nil,
-                            diagnostics: nil
-                        )
-                    ]
-                )
+                    // 🐛 DEBUG: Callback called
+                    print("[DEBUG] progressCallback called: fraction=\(fraction), time=\(progressInfo.currentTime)s")
 
-                // Save results (now throws on error instead of catching)
+                    // Progress callback (already runs on background, hop to MainActor for UI)
+                    // ✅ FIXED: Use Task with guard to prevent updates after simulation stops
+                    Task { @MainActor in
+                        // Guard against updates after simulation has stopped (prevents duplication after errors)
+                        guard self.isSimulationRunning else {
+                            print("[DEBUG] progressCallback: isSimulationRunning=false, skipping update")
+                            return
+                        }
+
+                        print("[DEBUG] progressCallback: updating UI, fraction=\(fraction)")
+
+                        self.simulationProgress = Double(fraction)
+                        self.currentSimulationTime = progressInfo.currentTime
+
+                        // ✅ NEW: Update live data (throttled)
+                        let now = Date()
+                        if now.timeIntervalSince(self.lastUpdateTime) >= self.minUpdateInterval {
+                            if let profiles = progressInfo.profiles {
+                                self.liveProfiles = profiles
+                                print("[DEBUG-AppViewModel] liveProfiles updated: Ti=\(profiles.ionTemperature.first ?? -1)...\(profiles.ionTemperature.last ?? -1) eV, count=\(profiles.ionTemperature.count)")
+                            }
+                            if let derived = progressInfo.derived {
+                                self.liveDerived = derived
+                            }
+                            self.lastUpdateTime = now
+                        }
+
+                        // Log every 10%
+                        if fraction.truncatingRemainder(dividingBy: 0.1) < 0.01 {
+                            self.logViewModel.log(
+                                "Progress: \(Int(fraction * 100))% | t = \(String(format: "%.3f", progressInfo.currentTime))s | dt = \(String(format: "%.4f", progressInfo.lastDt))s",
+                                level: .debug,
+                                category: "Simulation"
+                            )
+                        }
+                    }
+                }
+
+                // Save results
                 logViewModel.log("Saving simulation results...", level: .info, category: "Storage")
+
+                // 🐛 DEBUG: Log simulation result
+                print("[DEBUG-AppViewModel] SimulationResult: timeSeries=\(result.timeSeries?.count ?? 0) points")
+
                 try await saveResults(simulation: simulation, result: result, store: store)
 
-                logViewModel.log("✓ Simulation completed successfully", level: .info, category: "Simulation")
+                await MainActor.run {
+                    logViewModel.log("✓ Simulation completed successfully", level: .info, category: "Simulation")
+                    logger.notice("Simulation completed: \(simulation.name)")
+                }
 
             } catch is CancellationError {
                 await MainActor.run {
@@ -169,51 +268,101 @@ final class AppViewModel {
                     logger.info("Simulation cancelled: \(simulation.name)")
                     logViewModel.log("⚠ Simulation cancelled by user", level: .warning, category: "Simulation")
                 }
-            } catch {
+            } catch let error as SimulationError {
                 await MainActor.run {
                     simulation.status = .failed(error: error.localizedDescription)
                     errorMessage = error.localizedDescription
                     logger.error("Simulation failed: \(error.localizedDescription)")
+
                     logViewModel.log("✗ Simulation failed: \(error.localizedDescription)", level: .error, category: "Simulation")
+
+                    // Show recovery suggestion if available
+                    if let recovery = error.recoverySuggestion {
+                        logViewModel.log("💡 Suggestion: \(recovery)", level: .info, category: "Simulation")
+                    }
+                }
+            } catch let error as SolverError {
+                // ✅ NEW: Handle SolverError (convergence failures, etc.)
+                await MainActor.run {
+                    let errorDescription = "Solver error: \(error)"
+                    simulation.status = .failed(error: errorDescription)
+                    errorMessage = errorDescription
+                    logger.error("Solver error: \(error)")
+
+                    logViewModel.log("✗ Solver error: \(error)", level: .error, category: "Simulation")
+                    logViewModel.log("💡 Suggestion: Try reducing time step, increasing mesh resolution, or using a different solver", level: .info, category: "Simulation")
+                }
+            } catch {
+                await MainActor.run {
+                    simulation.status = .failed(error: error.localizedDescription)
+                    errorMessage = error.localizedDescription
+                    logger.error("Unexpected error: \(error.localizedDescription)")
+                    logViewModel.log("✗ Unexpected error: \(error.localizedDescription)", level: .error, category: "Simulation")
                 }
             }
         }
     }
 
     /// Pause simulation
-    /// Note: Currently not fully implemented - placeholder implementation only updates status
-    /// TODO: Implement actual simulation pause when orchestrator integration is complete
+    /// ✅ NEW: Fully functional with swift-gotenx Phase 1
+    /// ✅ FIXED: Properly track pause operation to avoid race conditions
     func pauseSimulation() {
-        guard isSimulationRunning, !isPaused, simulationTask != nil else { return }
+        guard let runner = currentRunner, isSimulationRunning, !isPaused else { return }
 
-        isPaused = true
+        // Cancel any pending pause/resume operation
+        pauseResumeTask?.cancel()
 
-        if let simulation = selectedSimulation {
-            simulation.status = .paused(at: simulationProgress)
+        // Create tracked task for pause operation
+        pauseResumeTask = Task {
+            await runner.pause()
+            await MainActor.run {
+                isPaused = true
+                if let simulation = selectedSimulation {
+                    simulation.status = .paused(at: simulationProgress)
+                }
+                logViewModel.log("⏸ Simulation paused", level: .info, category: "Simulation")
+                logger.info("Simulation paused")
+            }
         }
-
-        logger.info("Simulation paused (status only - execution continues)")
     }
 
     /// Resume simulation
-    /// Note: Currently not fully implemented - placeholder implementation only updates status
-    /// TODO: Implement actual simulation resume when orchestrator integration is complete
+    /// ✅ NEW: Fully functional with swift-gotenx Phase 1
+    /// ✅ FIXED: Properly track resume operation to avoid race conditions
     func resumeSimulation() {
-        guard isPaused, let simulation = selectedSimulation, simulationTask != nil else { return }
+        guard let runner = currentRunner, isSimulationRunning, isPaused else { return }
 
-        isPaused = false
-        simulation.status = .running(progress: simulationProgress)
+        // Cancel any pending pause/resume operation
+        pauseResumeTask?.cancel()
 
-        logger.info("Simulation resumed (status only)")
+        // Create tracked task for resume operation
+        pauseResumeTask = Task {
+            await runner.resume()
+            await MainActor.run {
+                isPaused = false
+                if let simulation = selectedSimulation {
+                    simulation.status = .running(progress: simulationProgress)
+                }
+                logViewModel.log("▶ Simulation resumed", level: .info, category: "Simulation")
+                logger.info("Simulation resumed")
+            }
+        }
     }
 
     /// Stop simulation
+    /// ✅ NEW: Full cancellation support (orchestrator stops immediately)
+    /// ✅ FIXED: Also cancel any pending pause/resume operations
     func stopSimulation() {
         guard let task = simulationTask else { return }
 
-        logViewModel.log("Stopping simulation...", level: .warning, category: "Simulation")
+        logViewModel.log("⏹ Stopping simulation...", level: .warning, category: "Simulation")
+
+        // Cancel any pending pause/resume operation
+        pauseResumeTask?.cancel()
+        pauseResumeTask = nil
 
         // Cancel the task (defer block will clean up isSimulationRunning)
+        // ✅ NEW: Task.cancel() now stops orchestrator immediately (swift-gotenx Phase 1)
         task.cancel()
 
         // Immediately update UI state
@@ -305,26 +454,9 @@ final class AppViewModel {
         return store
     }
 
-    private func createDefaultProfiles(nCells: Int) -> SerializableProfiles {
-        let rho = (0..<nCells).map { Float($0) / Float(max(nCells - 1, 1)) }
-
-        // Parabolic temperature profile: T = T0 * (1 - rho^2)
-        let Ti = rho.map { 10000.0 * (1.0 - $0 * $0) }  // 10 keV peak
-        let Te = rho.map { 10000.0 * (1.0 - $0 * $0) }
-
-        // Parabolic density profile: n = n0 * (1 - rho^2)^0.5
-        let ne = rho.map { 1e20 * pow(1.0 - $0 * $0, 0.5) }
-
-        // Initial poloidal flux (placeholder)
-        let psi = Array(repeating: Float(0.0), count: nCells)
-
-        return SerializableProfiles(
-            ionTemperature: Ti,
-            electronTemperature: Te,
-            electronDensity: ne,
-            poloidalFlux: psi
-        )
-    }
+    // ✅ REMOVED: createDefaultProfiles() method
+    // Initial profiles are now generated by SimulationRunner.initialize()
+    // using physics-based calculations from swift-gotenx
 }
 
 // MARK: - Errors
