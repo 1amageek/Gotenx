@@ -98,6 +98,80 @@ struct PlotInspectorView: View {
             }
 
             Section {
+                ForEach(PlotType.allCases) { plotType in
+                    Toggle(isOn: Binding(
+                        get: { plotViewModel.selectedPlotTypes.contains(plotType) },
+                        set: { isSelected in
+                            if isSelected {
+                                plotViewModel.selectedPlotTypes.insert(plotType)
+                            } else {
+                                plotViewModel.selectedPlotTypes.remove(plotType)
+                            }
+                        }
+                    )) {
+                        HStack {
+                            Image(systemName: plotType.icon)
+                                .foregroundStyle(.secondary)
+                                .imageScale(.medium)
+                                .frame(width: 20)
+
+                            Text(plotType.rawValue)
+                        }
+                    }
+                }
+            } header: {
+                Label("Profile Plots", systemImage: "chart.bar.xaxis")
+            } footer: {
+                Text("Select which profiles to display in the main canvas")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle(isOn: $plotViewModel.showTimeSeriesPlots) {
+                    HStack {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .foregroundStyle(.secondary)
+                            .imageScale(.medium)
+
+                        Text("Show Time Series")
+                    }
+                }
+
+                if plotViewModel.showTimeSeriesPlots {
+                    ForEach(ScalarPlotType.allCases) { scalarType in
+                        Toggle(isOn: Binding(
+                            get: { plotViewModel.selectedScalarPlots.contains(scalarType) },
+                            set: { isSelected in
+                                if isSelected {
+                                    plotViewModel.selectedScalarPlots.insert(scalarType)
+                                } else {
+                                    plotViewModel.selectedScalarPlots.remove(scalarType)
+                                }
+                            }
+                        )) {
+                            HStack {
+                                Image(systemName: scalarType.icon)
+                                    .foregroundStyle(scalarType.color)
+                                    .imageScale(.small)
+                                    .frame(width: 20)
+
+                                Text(scalarType.rawValue)
+                                    .font(.subheadline)
+                            }
+                        }
+                        .disabled(!plotViewModel.showTimeSeriesPlots)
+                    }
+                }
+            } header: {
+                Label("Time Series Plots", systemImage: "waveform.path.ecg")
+            } footer: {
+                Text("Display scalar quantities evolution over time")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Toggle(isOn: $plotViewModel.showLegend) {
                     HStack {
                         Image(systemName: "list.bullet.rectangle")
@@ -139,8 +213,25 @@ struct PlotInspectorView: View {
                     Slider(value: $plotViewModel.lineWidth, in: 1.0...5.0, step: 0.5)
                         .tint(Color(.systemBlue))
                 }
+
+                Picker("Y-Axis Scale", selection: $plotViewModel.yAxisScale) {
+                    ForEach(AxisScale.allCases) { scale in
+                        Label(scale.rawValue, systemImage: scale.icon).tag(scale)
+                    }
+                }
+                .pickerStyle(.segmented)
             } header: {
                 Label("Display Options", systemImage: "eye")
+            } footer: {
+                if plotViewModel.yAxisScale == .logarithmic {
+                    Text("⚠️ Log scale requires positive values. Zero or negative data will not be displayed.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                } else {
+                    Text("Logarithmic scale is useful for data spanning multiple orders of magnitude")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section {

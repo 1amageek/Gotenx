@@ -28,6 +28,12 @@ final class PlotViewModel {
     var showLegend: Bool = true
     var showGrid: Bool = true
     var lineWidth: Double = 2.0
+    var yAxisScale: AxisScale = .linear
+
+    // Plot selection
+    var selectedPlotTypes: Set<PlotType> = [.temperature, .density]
+    var selectedScalarPlots: Set<ScalarPlotType> = []
+    var showTimeSeriesPlots: Bool = false
 
     // Cache
     private var cachedPlotData: [UUID: PlotData] = [:]

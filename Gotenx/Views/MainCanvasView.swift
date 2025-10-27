@@ -31,31 +31,51 @@ struct MainCanvasView: View {
                 if let simulation = simulation {
                     // Upper Panel: Plot area
                     ScrollView {
-                        VStack(spacing: 32) {
                         if let plotData = plotViewModel.plotData {
-                            TemperaturePlotView(
-                                plotData: plotData,
-                                timeIndex: plotViewModel.currentTimeIndex,
-                                showLegend: plotViewModel.showLegend,
-                                showGrid: plotViewModel.showGrid,
-                                lineWidth: plotViewModel.lineWidth
-                            )
-                            .frame(height: 400)
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(.flexible(), spacing: 16),
+                                    GridItem(.flexible(), spacing: 16)
+                                ],
+                                spacing: 24
+                            ) {
+                                // Display selected profile plot types
+                                ForEach(Array(plotViewModel.selectedPlotTypes.sorted(by: { $0.rawValue < $1.rawValue })), id: \.self) { plotType in
+                                    GenericProfilePlotView(
+                                        plotData: plotData,
+                                        plotType: plotType,
+                                        timeIndex: plotViewModel.currentTimeIndex,
+                                        showLegend: plotViewModel.showLegend,
+                                        showGrid: plotViewModel.showGrid,
+                                        lineWidth: plotViewModel.lineWidth,
+                                        yAxisScale: plotViewModel.yAxisScale
+                                    )
+                                    .frame(height: 400)
+                                }
 
-                            DensityPlotView(
-                                plotData: plotData,
-                                timeIndex: plotViewModel.currentTimeIndex,
-                                showLegend: plotViewModel.showLegend,
-                                showGrid: plotViewModel.showGrid,
-                                lineWidth: plotViewModel.lineWidth
-                            )
-                            .frame(height: 400)
+                                // Display selected time series plots
+                                if plotViewModel.showTimeSeriesPlots {
+                                    ForEach(Array(plotViewModel.selectedScalarPlots.sorted(by: { $0.rawValue < $1.rawValue })), id: \.self) { scalarType in
+                                        TimeSeriesPlotView(
+                                            plotData: plotData,
+                                            scalarType: scalarType,
+                                            currentTimeIndex: plotViewModel.currentTimeIndex,
+                                            showGrid: plotViewModel.showGrid,
+                                            lineWidth: plotViewModel.lineWidth,
+                                            yAxisScale: plotViewModel.yAxisScale
+                                        )
+                                        .frame(height: 400)
+                                    }
+                                }
+                            }
+                            .padding(24)
                         } else {
                             // Show appropriate message based on simulation status
                             switch simulation.status {
                             case .completed:
                                 PlaceholderView(message: "Loading plot data...", showSpinner: true)
                                     .frame(height: 500)
+                                    .padding(24)
                                     .task {
                                         await plotViewModel.loadPlotData(for: simulation)
                                     }
@@ -65,66 +85,74 @@ struct MainCanvasView: View {
                                     let _ = print("[DEBUG-MainCanvas] liveProfiles received: Ti=\(liveProfiles.ionTemperature.first ?? -1)...\(liveProfiles.ionTemperature.last ?? -1) eV, ne=\(liveProfiles.electronDensity.first ?? -1)...\(liveProfiles.electronDensity.last ?? -1) m^-3, nCells=\(liveProfiles.ionTemperature.count)")
 
                                     // Show real-time charts during simulation
-                                    LiveTemperaturePlotView(
-                                        profiles: liveProfiles,
-                                        time: currentSimulationTime,
-                                        showLegend: plotViewModel.showLegend,
-                                        showGrid: plotViewModel.showGrid,
-                                        lineWidth: plotViewModel.lineWidth
-                                    )
-                                    .frame(height: 400)
-
-                                    LiveDensityPlotView(
-                                        profiles: liveProfiles,
-                                        time: currentSimulationTime,
-                                        showLegend: plotViewModel.showLegend,
-                                        showGrid: plotViewModel.showGrid,
-                                        lineWidth: plotViewModel.lineWidth
-                                    )
-                                    .frame(height: 400)
+                                    LazyVGrid(
+                                        columns: [
+                                            GridItem(.flexible(), spacing: 16),
+                                            GridItem(.flexible(), spacing: 16)
+                                        ],
+                                        spacing: 24
+                                    ) {
+                                        ForEach(Array(plotViewModel.selectedPlotTypes.sorted(by: { $0.rawValue < $1.rawValue })), id: \.self) { plotType in
+                                            GenericLiveProfilePlotView(
+                                                profiles: liveProfiles,
+                                                plotType: plotType,
+                                                time: currentSimulationTime,
+                                                showLegend: plotViewModel.showLegend,
+                                                showGrid: plotViewModel.showGrid,
+                                                lineWidth: plotViewModel.lineWidth,
+                                                yAxisScale: plotViewModel.yAxisScale
+                                            )
+                                            .frame(height: 400)
+                                        }
+                                    }
+                                    .padding(24)
                                 } else {
                                     PlaceholderView(message: "Simulation running...", showSpinner: false)
                                         .frame(height: 500)
+                                        .padding(24)
                                 }
                             case .paused:
                                 PlaceholderView(message: "Simulation paused", showSpinner: false)
                                     .frame(height: 500)
+                                    .padding(24)
                             case .failed(let error):
                                 PlaceholderView(message: "Simulation failed: \(error)", showSpinner: false)
                                     .frame(height: 500)
+                                    .padding(24)
                             case .cancelled:
                                 PlaceholderView(message: "Simulation cancelled", showSpinner: false)
                                     .frame(height: 500)
+                                    .padding(24)
                             case .draft, .queued:
                                 PlaceholderView(message: "Run simulation to view results", showSpinner: false)
                                     .frame(height: 500)
+                                    .padding(24)
                             }
                         }
                     }
-                    .padding(24)
-                }
-                .frame(height: availableHeight * splitRatio)
+                    .frame(height: availableHeight * splitRatio)
 
-                // Draggable Divider
-                DraggableDivider(
-                    isDragging: $isDraggingSplitter,
-                    splitRatio: $splitRatio,
-                    availableHeight: availableHeight
-                )
+                    // Draggable Divider
+                    DraggableDivider(
+                        isDragging: $isDraggingSplitter,
+                        splitRatio: $splitRatio,
+                        availableHeight: availableHeight
+                    )
 
-                // Lower Panel: Console
-                ConsoleView(
-                    logViewModel: logViewModel,
-                    plotViewModel: plotViewModel,
-                    currentTime: currentSimulationTime,
-                    totalTime: totalSimulationTime,
-                    isRunning: isRunning
-                )
-                .frame(height: availableHeight * (1 - splitRatio))
+                    // Lower Panel: Console
+                    ConsoleView(
+                        logViewModel: logViewModel,
+                        plotViewModel: plotViewModel,
+                        currentTime: currentSimulationTime,
+                        totalTime: totalSimulationTime,
+                        isRunning: isRunning
+                    )
+                    .frame(height: availableHeight * (1 - splitRatio))
                 } else {
                     VStack(spacing: 0) {
                         PlaceholderView(message: "Select a simulation", showSpinner: false)
                             .frame(height: availableHeight * splitRatio)
+                            .padding(24)
 
                         DraggableDivider(
                             isDragging: $isDraggingSplitter,
