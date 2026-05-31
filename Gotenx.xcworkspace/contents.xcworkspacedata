@@ -7,4 +7,7 @@
    <FileRef
       location = "container:../swift-gotenx">
    </FileRef>
+   <FileRef
+      location = "container:../swift-fusion-surrogates">
+   </FileRef>
 </Workspace>
