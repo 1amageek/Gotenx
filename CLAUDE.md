@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Gotenx App** is a macOS/iOS application for running and visualizing tokamak fusion reactor simulations. It depends on **swift-gotenx** (Swift implementation of Google DeepMind's TORAX), which must be available at `../swift-gotenx`.
 
-- **Platform**: macOS 26.0+, iOS 26.0+ (future)
+- **Platform**: macOS 26.4+, iOS 26.4+ (future)
 - **Build System**: Xcode project (not Swift Package Manager)
 - **UI Framework**: SwiftUI
 - **Data Persistence**: SwiftData (metadata) + File-based storage (simulation results)
@@ -532,7 +532,7 @@ func handleProgress(_ progress: ProgressInfo) {
 
 ---
 
-### 9. Liquid Glass Design System (iOS 26.0+)
+### 9. Liquid Glass Design System (iOS 26.4+)
 
 **Liquid Glass** is Apple's new dynamic material that combines glass optical properties with fluid behavior. It's automatically adopted by standard SwiftUI components but can also be applied to custom views.
 
@@ -1074,4 +1074,4 @@ Gotenx/
 
 **Last Updated:** 2025-10-26
 **Specification Version:** 2.2 (with MLX eval() best practices and optimization strategy)
-**Design System:** Liquid Glass (iOS 26.0+)
+**Design System:** Liquid Glass (iOS 26.4+)

@@ -187,7 +187,7 @@ Gotenx は macOS 標準の 3 カラムデザインを採用しています：
 
 ## 動作環境
 
-- **macOS 26.0 以降**（推奨: Apple Silicon Mac）
+- **macOS 26.4 以降**（推奨: Apple Silicon Mac）
 - **Xcode 16.0 以降**（開発者向け）
 - **ディスク空き容量**: 500 MB 以上（シミュレーション結果保存用）
 - **メモリ**: 8 GB 以上推奨
@@ -246,7 +246,7 @@ App Store で「Gotenx」を検索してインストール
 
 ## 技術スタック
 
-- **UI**: SwiftUI + Liquid Glass デザインシステム（iOS 26.0+）
+- **UI**: SwiftUI + Liquid Glass デザインシステム（iOS 26.4+）
 - **データ永続化**: SwiftData（メタデータ）+ ファイルベースストレージ（シミュレーション結果）
 - **並行処理**: Swift Concurrency（async/await、アクター）
 - **シミュレーションエンジン**: [swift-gotenx](https://github.com/1amageek/swift-gotenx)
