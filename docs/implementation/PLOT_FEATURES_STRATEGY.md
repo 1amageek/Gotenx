@@ -10,16 +10,16 @@
 
 ### 利用可能だが未実装のデータ
 
-#### Profiles (2D: [nTime, nCells])
+#### Profiles (2D: [nTime, cellCount])
 1. **Magnetic**
    - `q`: Safety factor (無次元)
    - `magneticShear`: Magnetic shear (無次元)
    - `psi`: Poloidal flux [Wb]
 
 2. **Transport Coefficients [m²/s]**
-   - `chiTotalIon/Electron`: Total heat conductivity
-   - `chiTurbIon/Electron`: Turbulent heat conductivity
-   - `dFace`: Particle diffusivity
+   - `totalIonHeatConductivity` / `totalElectronHeatConductivity`: Total heat conductivity
+   - `turbulentIonHeatConductivity` / `turbulentElectronHeatConductivity`: Turbulent heat conductivity
+   - `particleDiffusivity`: Particle diffusivity
 
 3. **Current Density [MA/m²]**
    - `jTotal`: Total current density

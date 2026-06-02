@@ -792,7 +792,7 @@ final class AppViewModel {
 
                 // Create initial profiles
                 logViewModel.log("Creating initial profiles...", level: .debug, category: "Simulation")
-                let initialProfiles = createDefaultProfiles(nCells: 100)
+                let initialProfiles = createDefaultProfiles(cellCount: 100)
 
                 logViewModel.log("⚠ Using placeholder execution (orchestrator not yet integrated)", level: .warning, category: "Simulation")
 
@@ -1099,7 +1099,7 @@ logViewModel.log("Convergence failed", level: .error, category: "Solver")
 
 ```swift
 logViewModel.log(
-    "Mesh initialization: \(config.mesh.nCells) cells, R=\(config.mesh.majorRadius)m",
+    "Mesh initialization: \(config.mesh.cellCount) cells, R=\(config.mesh.majorRadius)m",
     level: .info,
     category: "Mesh"
 )

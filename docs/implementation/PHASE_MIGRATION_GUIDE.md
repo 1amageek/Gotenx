@@ -9,7 +9,7 @@
 
 **2025-10-27実施の包括的診断により以下が判明:**
 
-1. **nCells=50, 75, 100すべてで同じ問題が発生**
+1. **cellCount=50, 75, 100すべてで同じ問題が発生**
    - residualNorm ≈ 0.46-0.48 で停滞
    - tolerance=0.1 に到達不可（4.6倍のギャップ）
 
@@ -19,15 +19,15 @@
    - Jacobianのスケール差: 10^16倍
 
 3. **メッシュ解像度だけでは解決不可**
-   - Jacobian条件数は良好（κ=3.36e+04 @ nCells=75）
+   - Jacobian条件数は良好（κ=3.36e+04 @ cellCount=75）
    - しかしNewton方向が不正確
 
 **結論:** Diagonal Preconditioner実装が必須
 
 詳細は以下を参照:
-- `DIAGNOSTIC_RESULTS.md` (nCells=50)
-- `DIAGNOSTIC_RESULTS_nCells100.md` (nCells=100)
-- `DIAGNOSTIC_RESULTS_nCells75.md` (nCells=75, 最終)
+- `DIAGNOSTIC_RESULTS.md` (cellCount=50)
+- `DIAGNOSTIC_RESULTS_nCells100.md` (cellCount=100)
+- `DIAGNOSTIC_RESULTS_nCells75.md` (cellCount=75, 最終)
 
 ---
 
@@ -38,7 +38,7 @@
 **目的:** Preconditioner実装まで一時的に動作させる
 
 **設定:**
-- nCells: **75** (条件数最良)
+- cellCount: **75** (条件数最良)
 - tolerance: **2e-1** (一時的に緩和、0.462で収束判定)
 - moderate profile: **1.5×, 1.2×** (維持)
 - シミュレーション時間: **5ms**
@@ -106,22 +106,22 @@
 // ========================================
 
 builder.time.end = 0.05  // ✅ PHASE 1: 50ms（Preconditioner検証）
-builder.time.initialDt = 1.5e-4  // 維持
+builder.time.initialTimeStep = 1.5e-4  // 維持
 
 builder.time.adaptive = AdaptiveTimestepConfig(
-    minDt: 1e-5,
-    minDtFraction: nil,
-    maxDt: 1e-3,  // 維持
+    minimumTimeStep: 1e-5,
+    minimumTimeStepFraction: nil,
+    maximumTimeStep: 1e-3,  // 維持
     safetyFactor: 0.9,
-    maxTimestepGrowth: 1.2
+    maximumTimeStepGrowth: 1.2
 )
 
-builder.runtime.static.mesh.nCells = 75  // 維持
+builder.runtime.static.mesh.cellCount = 75  // 維持
 
 builder.runtime.static.solver = SolverConfig(
     type: "newtonRaphson",
     tolerance: 1e-1,  // ✅ 本来の目標値に戻す（2e-1 → 1e-1）
-    maxIterations: 50,  // 維持
+    maximumIterations: 50,  // 維持
     tolerances: nil,
     physicalThresholds: nil
 )
@@ -180,25 +180,25 @@ builder.runtime.static.solver = SolverConfig(
 // Preconditioner検証成功後の実運用設定
 //   - time.end=2.0s（40倍に延長）
 //   - tolerance=5e-2（より厳しく）
-//   - maxDt増加、safetyFactor引き上げ（収束安定性確認済み）
+//   - maximumTimeStep増加、safetyFactor引き上げ（収束安定性確認済み）
 // ========================================
 
 builder.time.end = 2.0  // ✅ PHASE 2: フル時間
 
 builder.time.adaptive = AdaptiveTimestepConfig(
-    minDt: 1e-5,
-    minDtFraction: nil,
-    maxDt: 5e-3,  // ✅ より大きく（1e-3 → 5e-3）
+    minimumTimeStep: 1e-5,
+    minimumTimeStepFraction: nil,
+    maximumTimeStep: 5e-3,  // ✅ より大きく（1e-3 → 5e-3）
     safetyFactor: 0.95,  // ✅ より積極的に（0.9 → 0.95）
-    maxTimestepGrowth: 1.5  // ✅ より積極的に（1.2 → 1.5）
+    maximumTimeStepGrowth: 1.5  // ✅ より積極的に（1.2 → 1.5）
 )
 
-builder.runtime.static.mesh.nCells = 75  // 維持
+builder.runtime.static.mesh.cellCount = 75  // 維持
 
 builder.runtime.static.solver = SolverConfig(
     type: "newtonRaphson",
     tolerance: 5e-2,  // ✅ より厳しく（1e-1 → 5e-2）
-    maxIterations: 50,  // 維持
+    maximumIterations: 50,  // 維持
     tolerances: nil,  // TODO: Phase 3で.iterScaleに変更
     physicalThresholds: nil
 )
@@ -232,7 +232,7 @@ Phase 2で安定稼働が確認できたら、以下の長期改善を実施：
 builder.runtime.static.solver = SolverConfig(
     type: "newtonRaphson",
     tolerance: nil,  // ✅ legacyフィールド廃止
-    maxIterations: 20,
+    maximumIterations: 20,
     tolerances: .iterScale,  // ✅ 物理的に意味のある閾値
     physicalThresholds: .default
 )
@@ -263,12 +263,12 @@ builder.runtime.static.solver = SolverConfig(
 1. **toleranceをさらに緩める：**
    ```swift
    tolerance: 5e-2,  // 1e-2 → 5e-2
-   maxIterations: 50  // 30 → 50
+   maximumIterations: 50  // 30 → 50
    ```
 
 2. **dtをさらに小さくする：**
    ```swift
-   builder.time.initialDt = 3e-4  // 7e-4 → 3e-4
+   builder.time.initialTimeStep = 3e-4  // 7e-4 → 3e-4
    ```
 
 3. **初期プロファイルをflatに戻す：**
@@ -287,9 +287,9 @@ builder.runtime.static.solver = SolverConfig(
    builder.time.end = 0.05  // 0.1 → 0.05（50ms）
    ```
 
-2. **nCellsを削減：**
+2. **cellCountを削減：**
    ```swift
-   builder.runtime.static.mesh.nCells = 30  // 50 → 30
+   builder.runtime.static.mesh.cellCount = 30  // 50 → 30
    ```
 
 ### Phase 2で精度が不足する場合

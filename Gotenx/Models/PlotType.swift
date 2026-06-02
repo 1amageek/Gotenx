@@ -80,25 +80,25 @@ enum PlotType: String, CaseIterable, Identifiable {
     var dataFields: [PlotDataField] {
         switch self {
         case .temperature:
-            return [.Ti, .Te]
+            return [.ionTemperature, .electronTemperature]
         case .density:
-            return [.ne]
+            return [.electronDensity]
         case .safetyFactor:
-            return [.q]
+            return [.safetyFactor]
         case .magneticShear:
             return [.magneticShear]
         case .poloidalFlux:
-            return [.psi]
+            return [.poloidalFlux]
         case .heatConductivityIon:
-            return [.chiTotalIon, .chiTurbIon]
+            return [.totalIonHeatConductivity, .turbulentIonHeatConductivity]
         case .heatConductivityElectron:
-            return [.chiTotalElectron, .chiTurbElectron]
+            return [.totalElectronHeatConductivity, .turbulentElectronHeatConductivity]
         case .particleDiffusivity:
-            return [.dFace]
+            return [.particleDiffusivity]
         case .currentDensity:
-            return [.jTotal, .jOhmic, .jBootstrap, .jECRH]
+            return [.totalCurrentDensity, .ohmicCurrentDensity, .bootstrapCurrentDensity, .ecrhCurrentDensity]
         case .heatingSources:
-            return [.ohmicHeatSource, .fusionHeatSource, .pICRHIon, .pECRHElectron]
+            return [.ohmicHeatSource, .fusionHeatSource, .icrhIonHeatingPowerDensity, .ecrhElectronHeatingPowerDensity]
         }
     }
 

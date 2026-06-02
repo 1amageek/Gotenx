@@ -143,7 +143,7 @@ public enum SimulationError: Error, LocalizedError {
     case numericInstability(time: Float, variable: String, value: Float)
     case convergenceFailure(iterations: Int, residual: Float)
     case invalidBoundaryConditions(String)
-    case meshTooCoarse(nCells: Int, minimum: Int)
+    case meshTooCoarse(cellCount: Int, minimum: Int)
     case timeStepTooSmall(dt: Float, minimum: Float)
 
     // LocalizedError protocol

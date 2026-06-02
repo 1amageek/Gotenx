@@ -198,7 +198,7 @@ final class AppViewModel {
 
                 // Get data store
                 logViewModel.log("Initializing data store...", level: .debug, category: "Storage")
-                let store = try getDataStore()
+                let store = try simulationDataStore()
 
                 // ✅ NEW: Run actual simulation with progress callback
                 logViewModel.log("Starting physics calculation...", level: .info, category: "Simulation")
@@ -231,7 +231,7 @@ final class AppViewModel {
                         if now.timeIntervalSince(self.lastUpdateTime) >= self.minUpdateInterval {
                             if let profiles = progressInfo.profiles {
                                 self.liveProfiles = profiles
-                                print("[DEBUG-AppViewModel] liveProfiles updated: Ti=\(profiles.ionTemperature.first ?? -1)...\(profiles.ionTemperature.last ?? -1) eV, count=\(profiles.ionTemperature.count)")
+                                print("[DEBUG-AppViewModel] liveProfiles updated: ionTemperature=\(profiles.ionTemperature.first ?? -1)...\(profiles.ionTemperature.last ?? -1) eV, count=\(profiles.ionTemperature.count)")
                             }
                             if let derived = progressInfo.derived {
                                 self.liveDerived = derived
@@ -244,7 +244,7 @@ final class AppViewModel {
                         let progressPercent = Int(fraction * 100)
 
                         self.logViewModel.logAsync(
-                            "\(convergedIcon) Step \(progressInfo.totalSteps) | t = \(String(format: "%.4e", progressInfo.currentTime))s | dt = \(String(format: "%.2e", progressInfo.lastDt))s | \(progressPercent)%",
+                            "\(convergedIcon) Step \(progressInfo.totalSteps) | t = \(String(format: "%.4e", progressInfo.currentTime))s | timeStep = \(String(format: "%.2e", progressInfo.lastTimeStep))s | \(progressPercent)%",
                             level: .debug,
                             category: "Progress"
                         )
@@ -390,7 +390,7 @@ final class AppViewModel {
     func deleteSimulation(_ simulation: Simulation) async {
         do {
             // Delete file data (actor boundary crossing)
-            let store = try getDataStore()
+            let store = try simulationDataStore()
             try await store.deleteSimulation(simulation.id)
 
             // Remove from workspace
@@ -422,8 +422,9 @@ final class AppViewModel {
 
         // Update simulation metadata (MainActor required for SwiftData)
         try await MainActor.run {
-            simulation.finalProfiles = try? JSONEncoder().encode(result.finalProfiles)
-            simulation.statistics = try? JSONEncoder().encode(result.statistics)
+            let encoder = JSONEncoder()
+            simulation.finalProfiles = try encoder.encode(result.finalProfiles)
+            simulation.statistics = try encoder.encode(result.statistics)
             simulation.status = .completed
             simulation.modifiedAt = Date()
 
@@ -437,10 +438,10 @@ final class AppViewModel {
                         edgeTi: (timePoint.profiles.ionTemperature.last ?? 0) / 1000.0,
                         avgNe: timePoint.profiles.electronDensity.reduce(0, +) / Float(timePoint.profiles.electronDensity.count) / 1e20,
                         peakNe: (timePoint.profiles.electronDensity.max() ?? 0) / 1e20,
-                        plasmaCurrentMA: timePoint.derived?.I_plasma,
+                        plasmaCurrentMA: timePoint.derived?.plasmaCurrent,
                         fusionGainQ: timePoint.derived.map { derived in
-                            let P_input = derived.P_auxiliary + derived.P_ohmic + 1e-10
-                            return derived.P_fusion / P_input
+                            let P_input = derived.auxiliaryPower + derived.ohmicPower + 1e-10
+                            return derived.fusionPower / P_input
                         }
                     )
                 }
@@ -455,7 +456,7 @@ final class AppViewModel {
         }
     }
 
-    private func getDataStore() throws -> SimulationDataStore {
+    private func simulationDataStore() throws -> SimulationDataStore {
         if let existing = dataStore {
             return existing
         }

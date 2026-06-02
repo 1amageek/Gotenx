@@ -60,16 +60,22 @@ struct SidebarView: View {
     }
 
     private func createSimulation(with preset: ConfigurationPreset) {
-        let config = preset.configuration
-        guard let configData = try? JSONEncoder().encode(config) else { return }
+        let simulation: Simulation
 
-        let simulation = Simulation(
-            name: "New \(preset.rawValue)",
-            configurationData: configData
-        )
-        simulation.workspace = workspace
-        workspace.simulations.append(simulation)
-        modelContext.insert(simulation)
+        do {
+            let config = try preset.makeConfiguration()
+            let configData = try JSONEncoder().encode(config)
+            simulation = Simulation(
+                name: "New \(preset.rawValue)",
+                configurationData: configData
+            )
+            simulation.workspace = workspace
+            workspace.simulations.append(simulation)
+            modelContext.insert(simulation)
+        } catch {
+            print("Failed to create simulation preset: \(error)")
+            return
+        }
 
         do {
             try modelContext.save()

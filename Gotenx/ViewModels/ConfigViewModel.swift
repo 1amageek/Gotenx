@@ -23,7 +23,7 @@ final class ConfigViewModel {
     /// Number of radial cells (resolution)
     /// Default: 50 cells (Jacobian: 200×200)
     /// Recommended range: 25-100 for interactive use, 100-200 for production
-    var nCells: Int = 50 {
+    var cellCount: Int = 50 {
         didSet {
             validateMeshParameters()
         }
@@ -43,7 +43,7 @@ final class ConfigViewModel {
     /// Newton-Raphson maximum iterations
     /// Default: 100 (sufficient for most cases)
     /// Recommended range: 50-200
-    var maxIterations: Int = 100 {
+    var maximumIterations: Int = 100 {
         didSet {
             validateSolverParameters()
         }
@@ -61,26 +61,26 @@ final class ConfigViewModel {
     var solverValidationError: String?
 
     private func validateMeshParameters() {
-        // nCells validation
-        if nCells < 10 {
-            meshValidationError = "nCells must be at least 10 (current: \(nCells))"
-        } else if nCells > 500 {
-            meshValidationError = "nCells too large (max 500, current: \(nCells)). High resolution increases computation time significantly."
-        } else if nCells > 200 {
-            meshValidationError = "Warning: nCells > 200 may be slow. Jacobian size: \(nCells*4)×\(nCells*4)"
+        // cellCount validation
+        if cellCount < 10 {
+            meshValidationError = "Cell count must be at least 10 (current: \(cellCount))"
+        } else if cellCount > 500 {
+            meshValidationError = "Cell count is too large (max 500, current: \(cellCount)). High resolution increases computation time significantly."
+        } else if cellCount > 200 {
+            meshValidationError = "Warning: cell count above 200 may be slow. Jacobian size: \(cellCount*4)×\(cellCount*4)"
         } else {
             meshValidationError = nil
         }
     }
 
     private func validateSolverParameters() {
-        // maxIterations validation
-        if maxIterations < 10 {
-            solverValidationError = "maxIterations must be at least 10 (current: \(maxIterations))"
-        } else if maxIterations > 500 {
-            solverValidationError = "maxIterations too large (max 500, current: \(maxIterations)). May cause excessive computation time."
-        } else if maxIterations > 200 {
-            solverValidationError = "Warning: maxIterations > 200 may be slow. Each iteration computes Jacobian (vjp × \(nCells*4))"
+        // maximumIterations validation
+        if maximumIterations < 10 {
+            solverValidationError = "maximumIterations must be at least 10 (current: \(maximumIterations))"
+        } else if maximumIterations > 500 {
+            solverValidationError = "maximumIterations too large (max 500, current: \(maximumIterations)). May cause excessive computation time."
+        } else if maximumIterations > 200 {
+            solverValidationError = "Warning: maximumIterations > 200 may be slow. Each iteration computes Jacobian (vjp × \(cellCount*4))"
         } else {
             solverValidationError = nil
         }
@@ -88,8 +88,8 @@ final class ConfigViewModel {
 
     /// Estimated Jacobian computation time
     var estimatedJacobianTime: String {
-        let baseTime: Double = 0.06  // seconds per vjp at nCells=100
-        let n = nCells * 4  // Total variables
+        let baseTime: Double = 0.06  // seconds per vjp at cellCount=100
+        let n = cellCount * 4  // Total variables
         let scalingFactor = Double(n) / 400.0  // Relative to 100 cells
         let estimatedTime = baseTime * scalingFactor * Double(n)
 
@@ -103,20 +103,20 @@ final class ConfigViewModel {
     /// Create configuration from current settings
     func createConfiguration() -> Data? {
         // Calculate CFL-safe timestep for current mesh
-        // CFL = chi * dt / (cellSpacing^2) < 0.5
-        // cellSpacing = minorRadius / nCells
-        // dt_safe = 0.45 * (minorRadius / nCells)^2 / chi_max
-        let cellSpacing = Float(self.minorRadius) / Float(self.nCells)
-        let chi_max: Float = 1.0  // Assume maximum chi for safety
-        let dt_safe = 0.45 * (cellSpacing * cellSpacing) / chi_max
+        // CFL = chi * timeStep / (cellSpacing^2) < 0.5
+        // cellSpacing = minorRadius / cellCount
+        // safeTimeStep = 0.45 * (minorRadius / cellCount)^2 / maximumHeatDiffusivity
+        let cellSpacing = Float(self.minorRadius) / Float(self.cellCount)
+        let maximumHeatDiffusivity: Float = 1.0
+        let safeTimeStep = 0.45 * (cellSpacing * cellSpacing) / maximumHeatDiffusivity
 
         let config = SimulationConfiguration.build { builder in
             builder.time.start = 0.0
             builder.time.end = 2.0
-            builder.time.initialDt = dt_safe  // ✅ CFL-SAFE: Auto-calculated based on mesh
+            builder.time.initialTimeStep = safeTimeStep
 
             // Use user-configurable mesh parameters
-            builder.runtime.static.mesh.nCells = self.nCells
+            builder.runtime.static.mesh.cellCount = self.cellCount
             builder.runtime.static.mesh.majorRadius = Float(self.majorRadius)
             builder.runtime.static.mesh.minorRadius = Float(self.minorRadius)
             builder.runtime.static.mesh.toroidalField = Float(self.toroidalField)
@@ -128,7 +128,7 @@ final class ConfigViewModel {
                 tolerance: nil,  // Use tolerances instead
                 tolerances: .iterScale,  // Physically optimized per-equation tolerances
                 physicalThresholds: .default,
-                maxIterations: self.maxIterations,
+                maximumIterations: self.maximumIterations,
                 lineSearchEnabled: true,
                 lineSearchMaxAlpha: 1.0
             )
@@ -137,7 +137,12 @@ final class ConfigViewModel {
             builder.output.directory = "/tmp/gotenx_results"
         }
 
-        return try? JSONEncoder().encode(config)
+        do {
+            return try JSONEncoder().encode(config)
+        } catch {
+            logger.error("Failed to encode configuration: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
     }
 
     /// Create default ITER-like configuration (deprecated - use createConfiguration)

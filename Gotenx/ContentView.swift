@@ -83,7 +83,7 @@ struct ContentView: View {
             // Initialize viewModel with logViewModel from environment
             if viewModel == nil {
                 let workspace = workspaces.isEmpty ? Workspace(name: "Default") : workspaces[0]
-                var vm = AppViewModel(workspace: workspace, logViewModel: logViewModel)
+                let vm = AppViewModel(workspace: workspace, logViewModel: logViewModel)
                 vm.modelContext = modelContext
                 viewModel = vm
 

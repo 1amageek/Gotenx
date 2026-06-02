@@ -285,10 +285,10 @@ func runSimulation(_ simulation: Simulation) async {
             let dynamicParams = try DynamicRuntimeParams(from: config.runtime.dynamic)
 
             // Create initial profiles (SerializableProfiles)
-            let initialProfiles = SerializableProfiles.defaultITERLike(nCells: staticParams.mesh.nCells)
+            let initialProfiles = SerializableProfiles.defaultITERLike(cellCount: staticParams.mesh.cellCount)
 
             // Create transport model
-            let transport = createTransportModel(config.runtime.dynamic.transport)
+            let transport = try createTransportModel(config.runtime.dynamic.transport)
 
             // Create source models
             let sources = createSourceModels(config.runtime.dynamic.sources)
@@ -335,6 +335,14 @@ func runSimulation(_ simulation: Simulation) async {
             simulationTask = nil
         }
     }
+
+    private func decodeConfiguration(from data: Data) -> SimulationConfiguration? {
+        do {
+            return try JSONDecoder().decode(SimulationConfiguration.self, from: data)
+        } catch {
+            return nil
+        }
+    }
 }
 
 /// Save simulation results
@@ -345,8 +353,8 @@ private func saveResults(simulation: Simulation, result: SimulationResult, store
         try store.saveSimulationResult(result, simulationID: simulation.id)  // ✅ SimulationResult IS Codable
 
         // Update simulation metadata
-        simulation.finalProfiles = try? JSONEncoder().encode(result.finalProfiles)  // ✅ SerializableProfiles
-        simulation.statistics = try? JSONEncoder().encode(result.statistics)
+        simulation.finalProfiles = try JSONEncoder().encode(result.finalProfiles)  // ✅ SerializableProfiles
+        simulation.statistics = try JSONEncoder().encode(result.statistics)
         simulation.status = .completed
         simulation.modifiedAt = Date()
 
@@ -378,17 +386,8 @@ private func saveResults(simulation: Simulation, result: SimulationResult, store
 }
 
 /// Create transport model from configuration
-private func createTransportModel(_ config: TransportConfig) -> any TransportModel {
-    switch config.modelType {
-    case .constant:
-        return ConstantTransportModel(chiTurb: config.chiConstant ?? 1.0)
-    case .qlknn:
-        return QLKNNModel()  // Will load pre-trained model
-    case .criticalGradient:
-        return CriticalGradientModel()
-    case .bohm:
-        return BohmTransportModel()
-    }
+private func createTransportModel(_ config: TransportConfig) throws -> any TransportModel {
+    try TransportModelFactory.create(config: config)
 }
 
 /// Create source models from configuration
@@ -502,7 +501,11 @@ class PlotViewModel {
         animationTask = Task {
             while isAnimating && !Task.isCancelled {
                 let frameDelay = Int(100 / animationSpeed)  // Base: 100ms
-                try? await Task.sleep(for: .milliseconds(frameDelay))
+                do {
+                    try await Task.sleep(for: .milliseconds(frameDelay))
+                } catch {
+                    break
+                }
 
                 await MainActor.run {
                     currentTimeIndex += 1
@@ -685,8 +688,8 @@ Add these helper extensions to the App (not swift-gotenx):
 ```swift
 extension SerializableProfiles {
     /// Create default ITER-like initial profiles
-    static func defaultITERLike(nCells: Int) -> SerializableProfiles {
-        let rho = (0..<nCells).map { Float($0) / Float(max(nCells - 1, 1)) }
+    static func defaultITERLike(cellCount: Int) -> SerializableProfiles {
+        let rho = (0..<cellCount).map { Float($0) / Float(max(cellCount - 1, 1)) }
 
         // Parabolic temperature profile: T = T0 * (1 - rho^2)
         let Ti = rho.map { 10000.0 * (1.0 - $0 * $0) }  // 10 keV peak
@@ -696,7 +699,7 @@ extension SerializableProfiles {
         let ne = rho.map { 1e20 * pow(1.0 - $0 * $0, 0.5) }  // 10^20 m^-3 peak
 
         // Initial poloidal flux (placeholder)
-        let psi = Array(repeating: Float(0.0), count: nCells)
+        let psi = Array(repeating: Float(0.0), count: cellCount)
 
         return SerializableProfiles(
             ionTemperature: Ti,
@@ -782,7 +785,7 @@ struct ConfigInspectorView: View {
     var body: some View {
         if let simulation = simulation,
            let configData = simulation.configurationData,
-           let config = try? JSONDecoder().decode(SimulationConfiguration.self, from: configData) {
+           let config = decodeConfiguration(from: configData) {
 
             Form {
                 // Existing sections...
@@ -828,22 +831,26 @@ struct TransportParametersView: View {
         Group {
             switch modelType {
             case .constant:
-                LabeledContent("Diffusivity") {
-                    TextField("m²/s", value: binding(for: "diffusivity", default: 1.0), format: .number)
+                LabeledContent("Ion Heat Diffusivity") {
+                    TextField("m²/s", value: binding(for: "ionHeatDiffusivity", default: 1.0), format: .number)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Electron Heat Diffusivity") {
+                    TextField("m²/s", value: binding(for: "electronHeatDiffusivity", default: 1.0), format: .number)
                         .multilineTextAlignment(.trailing)
                 }
 
             case .bohmGyrobohm:
                 LabeledContent("Bohm Coefficient") {
-                    TextField("", value: binding(for: "bohm_coeff", default: 1.0), format: .number)
+                    TextField("", value: binding(for: "bohmCoefficient", default: 1.0), format: .number)
                         .multilineTextAlignment(.trailing)
                 }
                 LabeledContent("GyroBohm Coefficient") {
-                    TextField("", value: binding(for: "gyrobohm_coeff", default: 1.0), format: .number)
+                    TextField("", value: binding(for: "gyroBohmCoefficient", default: 1.0), format: .number)
                         .multilineTextAlignment(.trailing)
                 }
                 LabeledContent("Ion Mass Number") {
-                    TextField("", value: binding(for: "ion_mass_number", default: 2.0), format: .number)
+                    TextField("", value: binding(for: "ionMassNumber", default: 2.0), format: .number)
                         .multilineTextAlignment(.trailing)
                 }
 
@@ -854,19 +861,19 @@ struct TransportParametersView: View {
 
             case .densityTransition:
                 LabeledContent("Transition Density") {
-                    TextField("m⁻³", value: binding(for: "transition_density", default: 2.5e19), format: .scientific)
+                    TextField("m⁻³", value: binding(for: "transitionDensity", default: 2.5e19), format: .scientific)
                         .multilineTextAlignment(.trailing)
                 }
                 LabeledContent("Transition Width") {
-                    TextField("m⁻³", value: binding(for: "transition_width", default: 0.5e19), format: .scientific)
+                    TextField("m⁻³", value: binding(for: "transitionWidth", default: 0.5e19), format: .scientific)
                         .multilineTextAlignment(.trailing)
                 }
                 LabeledContent("Ion Mass Number") {
-                    TextField("", value: binding(for: "ion_mass_number", default: 2.0), format: .number)
+                    TextField("", value: binding(for: "ionMassNumber", default: 2.0), format: .number)
                         .multilineTextAlignment(.trailing)
                 }
                 LabeledContent("RI Coefficient") {
-                    TextField("", value: binding(for: "ri_coefficient", default: 0.5), format: .number)
+                    TextField("", value: binding(for: "riCoefficient", default: 0.5), format: .number)
                         .multilineTextAlignment(.trailing)
                 }
             }
@@ -923,9 +930,9 @@ enum ConfigurationPreset: String, CaseIterable, Identifiable {
             return SimulationConfiguration.build { builder in
                 builder.time.start = 0.0
                 builder.time.end = 2.0
-                builder.time.initialDt = 1e-3
+                builder.time.initialTimeStep = 1e-3
 
-                builder.runtime.static.mesh.nCells = 100
+                builder.runtime.static.mesh.cellCount = 100
                 builder.runtime.static.mesh.majorRadius = 3.0
                 builder.runtime.static.mesh.minorRadius = 1.0
                 builder.runtime.static.mesh.toroidalField = 2.5
@@ -941,9 +948,9 @@ enum ConfigurationPreset: String, CaseIterable, Identifiable {
                 // Same basic config...
                 builder.runtime.dynamic.transport.modelType = .bohmGyrobohm
                 builder.runtime.dynamic.transport.parameters = [
-                    "bohm_coeff": 1.0,
-                    "gyrobohm_coeff": 1.0,
-                    "ion_mass_number": 2.0
+                    "bohmCoefficient": 1.0,
+                    "gyroBohmCoefficient": 1.0,
+                    "ionMassNumber": 2.0
                 ]
             }
 
@@ -952,10 +959,10 @@ enum ConfigurationPreset: String, CaseIterable, Identifiable {
                 // Same basic config...
                 builder.runtime.dynamic.transport.modelType = .densityTransition
                 builder.runtime.dynamic.transport.parameters = [
-                    "transition_density": 2.5e19,
-                    "transition_width": 0.5e19,
-                    "ion_mass_number": 2.0,
-                    "ri_coefficient": 0.5
+                    "transitionDensity": 2.5e19,
+                    "transitionWidth": 0.5e19,
+                    "ionMassNumber": 2.0,
+                    "riCoefficient": 0.5
                 ]
             }
 
@@ -1009,18 +1016,16 @@ struct SidebarView: View {
     }
 
     private func createSimulation(with preset: ConfigurationPreset) {
-        let config = preset.configuration
-        guard let configData = try? JSONEncoder().encode(config) else { return }
-
-        let simulation = Simulation(
-            name: "New \(preset.rawValue)",
-            configurationData: configData
-        )
-        simulation.workspace = workspace
-        workspace.simulations.append(simulation)
-        modelContext.insert(simulation)
-
         do {
+            let config = try preset.makeConfiguration()
+            let configData = try JSONEncoder().encode(config)
+            let simulation = Simulation(
+                name: "New \(preset.rawValue)",
+                configurationData: configData
+            )
+            simulation.workspace = workspace
+            workspace.simulations.append(simulation)
+            modelContext.insert(simulation)
             try modelContext.save()
             selectedSimulation = simulation
         } catch {
@@ -1054,32 +1059,31 @@ final class ConfigViewModel {
     func createConfiguration(
         preset: ConfigurationPreset,
         customParameters: [String: Float]? = nil
-    ) -> Data? {
-        var config = preset.configuration
+    ) throws -> Data {
+        let config = try preset.makeConfiguration()
 
         if let params = customParameters {
-            // Override preset parameters with custom values
-            config.runtime.dynamic.transport.parameters = params
+            _ = try TransportConfig(modelType: selectedTransportModel, parameters: params)
         }
 
-        return try? JSONEncoder().encode(config)
+        return try JSONEncoder().encode(config)
     }
 
     /// Validate transport parameters
     func validateParameters(for modelType: TransportModelType) -> Bool {
         switch modelType {
         case .densityTransition:
-            guard let transitionDensity = transportParameters["transition_density"],
+            guard let transitionDensity = transportParameters["transitionDensity"],
                   transitionDensity > 0 else { return false }
-            guard let transitionWidth = transportParameters["transition_width"],
+            guard let transitionWidth = transportParameters["transitionWidth"],
                   transitionWidth > 0 else { return false }
             return true
 
         case .bohmGyrobohm:
             // Coefficients should be positive
-            let bohmCoeff = transportParameters["bohm_coeff"] ?? 1.0
-            let gyroBohm = transportParameters["gyrobohm_coeff"] ?? 1.0
-            return bohmCoeff >= 0 && gyroBohm >= 0
+            let bohmCoefficient = transportParameters["bohmCoefficient", default: 1.0]
+            let gyroBohm = transportParameters["gyroBohmCoefficient", default: 1.0]
+            return bohmCoefficient >= 0 && gyroBohm >= 0
 
         case .constant, .qlknn:
             return true
@@ -1119,34 +1123,39 @@ extension TransportModelType {
     var requiredParameters: [String] {
         switch self {
         case .constant:
-            return ["diffusivity"]
+            return ["ionHeatDiffusivity", "electronHeatDiffusivity"]
         case .bohmGyrobohm:
-            return ["bohm_coeff", "gyrobohm_coeff", "ion_mass_number"]
+            return ["bohmCoefficient", "gyroBohmCoefficient", "ionMassNumber"]
         case .qlknn:
             return []
         case .densityTransition:
-            return ["transition_density", "transition_width", "ion_mass_number", "ri_coefficient"]
+            return ["transitionDensity", "transitionWidth", "ionMassNumber", "riCoefficient"]
         }
     }
 
-    var defaultParameters: [String: Float] {
+    var suggestedParameters: [String: Float] {
         switch self {
         case .constant:
-            return ["diffusivity": 1.0]
+            return [
+                "ionHeatDiffusivity": 1.0,
+                "electronHeatDiffusivity": 1.0,
+                "particleDiffusivity": 0.0,
+                "convectionVelocity": 0.0
+            ]
         case .bohmGyrobohm:
             return [
-                "bohm_coeff": 1.0,
-                "gyrobohm_coeff": 1.0,
-                "ion_mass_number": 2.0
+                "bohmCoefficient": 1.0,
+                "gyroBohmCoefficient": 1.0,
+                "ionMassNumber": 2.0
             ]
         case .qlknn:
             return [:]
         case .densityTransition:
             return [
-                "transition_density": 2.5e19,
-                "transition_width": 0.5e19,
-                "ion_mass_number": 2.0,
-                "ri_coefficient": 0.5
+                "transitionDensity": 2.5e19,
+                "transitionWidth": 0.5e19,
+                "ionMassNumber": 2.0,
+                "riCoefficient": 0.5
             ]
         }
     }
@@ -1196,10 +1205,10 @@ extension TransportModelType {
       "transport": {
         "modelType": "densityTransition",
         "parameters": {
-          "transition_density": 2.5e19,
-          "transition_width": 0.5e19,
-          "ion_mass_number": 2.0,
-          "ri_coefficient": 0.5
+          "transitionDensity": 2.5e19,
+          "transitionWidth": 0.5e19,
+          "ionMassNumber": 2.0,
+          "riCoefficient": 0.5
         }
       }
     }
@@ -1219,10 +1228,14 @@ extension TransportModelType {
 // ConfigViewModel handles update:
 func updateTransportParameters() {
     var config = currentSimulation.configuration
-    config.runtime.dynamic.transport.parameters["transition_density"] = 3.0e19
+    config.runtime.dynamic.transport.parameters["transitionDensity"] = 3.0e19
 
     if validateParameters(for: config.runtime.dynamic.transport.modelType) {
-        currentSimulation.configurationData = try? JSONEncoder().encode(config)
+        do {
+            currentSimulation.configurationData = try JSONEncoder().encode(config)
+        } catch {
+            logger.error("Failed to encode updated configuration: \(error.localizedDescription)")
+        }
     }
 }
 ```
@@ -1234,12 +1247,12 @@ func updateTransportParameters() {
 
 // Hydrogen (m = 1):
 let configH = SimulationConfiguration.build { builder in
-    builder.runtime.dynamic.transport.parameters["ion_mass_number"] = 1.0
+    builder.runtime.dynamic.transport.parameters["ionMassNumber"] = 1.0
 }
 
 // Deuterium (m = 2):
 let configD = SimulationConfiguration.build { builder in
-    builder.runtime.dynamic.transport.parameters["ion_mass_number"] = 2.0
+    builder.runtime.dynamic.transport.parameters["ionMassNumber"] = 2.0
 }
 
 // Run both and compare confinement times in plots

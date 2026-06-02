@@ -394,7 +394,7 @@ func testPlotTypeDataFields() {
 func testExtractDataBoundsCheck() {
     let field = PlotDataField.Ti
     let emptyData = field.extractData(from: plotData, at: 999)
-    XCTAssertEqual(emptyData.count, plotData.nCells)
+    XCTAssertEqual(emptyData.count, plotData.cellCount)
     XCTAssertTrue(emptyData.allSatisfy { $0 == 0 })
 }
 ```

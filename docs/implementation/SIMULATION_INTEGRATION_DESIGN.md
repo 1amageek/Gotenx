@@ -100,7 +100,7 @@ do {
 - `numericInstability(time:variable:value:)`
 - `convergenceFailure(iterations:residual:)`
 - `invalidBoundaryConditions(String)`
-- `meshTooCoarse(nCells:minimum:)`
+- `meshTooCoarse(cellCount:minimum:)`
 - `timeStepTooSmall(dt:minimum:)`
 
 ### 5. Breaking Change: SourceModelFactory
@@ -176,7 +176,7 @@ func pauseSimulation() {
 
 ```swift
 // Initial poloidal flux (placeholder)
-let psi = Array(repeating: Float(0.0), count: nCells)
+let psi = Array(repeating: Float(0.0), count: cellCount)
 ```
 
 **影響**:

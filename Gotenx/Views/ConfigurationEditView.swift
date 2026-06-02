@@ -14,13 +14,13 @@ struct ConfigurationEditView: View {
     var body: some View {
         Form {
             Section {
-                Stepper(value: $configViewModel.nCells, in: 10...500, step: 10) {
+                Stepper(value: $configViewModel.cellCount, in: 10...500, step: 10) {
                     HStack {
                         Text("Radial Cells")
 
                         Spacer()
 
-                        Text("\(configViewModel.nCells)")
+                        Text("\(configViewModel.cellCount)")
                             .fontWeight(.semibold)
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
@@ -40,7 +40,7 @@ struct ConfigurationEditView: View {
 
                     Spacer()
 
-                    Text("\(configViewModel.nCells * 4) × \(configViewModel.nCells * 4)")
+                    Text("\(configViewModel.cellCount * 4) × \(configViewModel.cellCount * 4)")
                         .font(.caption)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
@@ -115,13 +115,13 @@ struct ConfigurationEditView: View {
             }
 
             Section {
-                Stepper(value: $configViewModel.maxIterations, in: 10...500, step: 10) {
+                Stepper(value: $configViewModel.maximumIterations, in: 10...500, step: 10) {
                     HStack {
                         Text("Max Iterations")
 
                         Spacer()
 
-                        Text("\(configViewModel.maxIterations)")
+                        Text("\(configViewModel.maximumIterations)")
                             .fontWeight(.semibold)
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
@@ -148,7 +148,7 @@ struct ConfigurationEditView: View {
             } header: {
                 Label("Solver Settings", systemImage: "function")
             } footer: {
-                Text("Newton-Raphson solver with per-equation tolerances (Ti/Te: 10eV, ne: 1e17m⁻³, ψ: 1mWb absolute + 0.01% relative). Higher iterations allow more time for convergence.")
+                Text("Newton-Raphson solver with per-equation tolerances (ionTemperature/electronTemperature: 10eV, electronDensity: 1e17m⁻³, ψ: 1mWb absolute + 0.01% relative). Higher iterations allow more time for convergence.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -29,7 +29,7 @@ final class LogViewModel {
     var autoScroll: Bool = true
 
     /// Maximum entries to keep (memory management)
-    var maxEntries: Int = 1000
+    var maximumEntries: Int = 1000
 
     // Performance optimization: Buffered logging
     private var logBuffer: [LogEntry] = []
@@ -82,8 +82,8 @@ final class LogViewModel {
         entries.append(entry)
 
         // Trim old entries
-        if entries.count > maxEntries {
-            let removeCount = entries.count - maxEntries
+        if entries.count > maximumEntries {
+            let removeCount = entries.count - maximumEntries
             entries.removeFirst(removeCount)
             logger.debug("Trimmed \(removeCount) old log entries")
         }
@@ -133,8 +133,8 @@ final class LogViewModel {
         lastFlushTime = Date()
 
         // Trim old entries if needed
-        if entries.count > maxEntries {
-            let removeCount = entries.count - maxEntries
+        if entries.count > maximumEntries {
+            let removeCount = entries.count - maximumEntries
             entries.removeFirst(removeCount)
             logger.debug("Trimmed \(removeCount) old log entries during flush")
         }

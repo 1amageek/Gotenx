@@ -1,15 +1,9 @@
 //
 //  SimulationDataStore.swift
 //  Gotenx
-//
-//  Created by Claude Code on 2025/10/22.
-//
-
 import Foundation
 import GotenxCore
 import OSLog
-
-private let logger = Logger(subsystem: "com.gotenx.app", category: "datastore")
 
 /// File-based storage for simulation results
 ///
@@ -17,6 +11,7 @@ private let logger = Logger(subsystem: "com.gotenx.app", category: "datastore")
 /// SwiftData only stores lightweight metadata.
 actor SimulationDataStore {
     private let fileManager = FileManager.default
+    private let logger = Logger(subsystem: "com.gotenx.app", category: "datastore")
     private let baseURL: URL
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -179,7 +174,7 @@ actor SimulationDataStore {
     // MARK: - Utility
 
     /// Get file size for a simulation
-    func getStorageSize(for simulationID: UUID) throws -> Int64 {
+    func storageSize(for simulationID: UUID) throws -> Int64 {
         let simDir = baseURL.appendingPathComponent(simulationID.uuidString)
 
         guard fileManager.fileExists(atPath: simDir.path) else {
@@ -190,8 +185,15 @@ actor SimulationDataStore {
 
         if let enumerator = fileManager.enumerator(at: simDir, includingPropertiesForKeys: [.fileSizeKey]) {
             for case let fileURL as URL in enumerator {
-                if let fileSize = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                do {
+                    let values = try fileURL.resourceValues(forKeys: [.fileSizeKey])
+                    guard let fileSize = values.fileSize else {
+                        logger.warning("Missing file size for \(fileURL.path, privacy: .public)")
+                        continue
+                    }
                     totalSize += Int64(fileSize)
+                } catch {
+                    logger.warning("Failed to read file size for \(fileURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 }
             }
         }

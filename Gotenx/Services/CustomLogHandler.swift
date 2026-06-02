@@ -2,8 +2,6 @@
 //  CustomLogHandler.swift
 //  Gotenx
 //
-//  Created by Claude Code on 2025/10/27.
-//
 
 import Foundation
 import Logging
@@ -24,6 +22,9 @@ struct CustomLogHandler: LogHandler {
     /// Current log level
     var logLevel: Logger.Level = .debug
 
+    /// Contextual metadata provider
+    var metadataProvider: Logger.MetadataProvider?
+
     /// Metadata storage
     var metadata = Logger.Metadata()
 
@@ -41,27 +42,22 @@ struct CustomLogHandler: LogHandler {
         set { metadata[key] = newValue }
     }
 
-    func log(
-        level: Logger.Level,
-        message: Logger.Message,
-        metadata: Logger.Metadata?,
-        source: String,
-        file: String,
-        function: String,
-        line: UInt
-    ) {
+    func log(event: LogEvent) {
         // Extract category from label
         // e.g., "com.gotenx.core.orchestrator" → "Orchestrator"
         let category = extractCategory(from: label)
 
         // Map swift-log level to LogViewModel level
-        let appLevel = mapLogLevel(level)
+        let appLevel = mapLogLevel(event.level)
 
         // Combine default metadata with message metadata
-        let combinedMetadata = self.metadata.merging(metadata ?? [:]) { _, new in new }
+        let providedMetadata = metadataProvider?.get() ?? [:]
+        let combinedMetadata = self.metadata
+            .merging(providedMetadata) { _, provided in provided }
+            .merging(event.metadata ?? [:]) { _, explicit in explicit }
 
         // Format message with metadata if present
-        let formattedMessage = formatMessage(message, metadata: combinedMetadata)
+        let formattedMessage = formatMessage(event.message, metadata: combinedMetadata)
 
         // Forward to LogViewModel on MainActor
         guard let logViewModel = logViewModel else {
@@ -71,7 +67,7 @@ struct CustomLogHandler: LogHandler {
         }
 
         // Use logAsync for high-frequency logs (debug)
-        if level == .debug || level == .trace {
+        if event.level == .debug || event.level == .trace {
             logViewModel.logAsync(formattedMessage, level: appLevel, category: category)
         } else {
             // Use synchronous log for important messages (info, warning, error)

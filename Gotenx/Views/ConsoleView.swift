@@ -286,7 +286,11 @@ struct ConsoleToolbar: View {
 
         // Hide after 2 seconds
         Task {
-            try? await Task.sleep(for: .seconds(2))
+            do {
+                try await Task.sleep(for: .seconds(2))
+            } catch {
+                return
+            }
             await MainActor.run {
                 withAnimation {
                     showCopySuccess = false

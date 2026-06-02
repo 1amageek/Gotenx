@@ -42,7 +42,7 @@ struct GenericProfilePlotView: View {
             }
 
             // Chart
-            if timeIndex < plotData.nTime {
+            if timeIndex < plotData.timeCount {
                 // Check if all data is zero (unimplemented feature)
                 let allDataIsZero = plotType.dataFields.allSatisfy { field in
                     let data = field.extractData(from: plotData, at: timeIndex)
@@ -74,9 +74,9 @@ struct GenericProfilePlotView: View {
                             let data = field.extractData(from: plotData, at: timeIndex)
 
                         // Area fill
-                        ForEach(Array(plotData.rho.enumerated()), id: \.offset) { index, rho in
+                        ForEach(Array(plotData.normalizedRadius.enumerated()), id: \.offset) { index, normalizedRadius in
                             AreaMark(
-                                x: .value("ρ", rho),
+                                x: .value("ρ", normalizedRadius),
                                 yStart: .value("Zero", 0),
                                 yEnd: .value(field.label, data[index])
                             )
@@ -85,9 +85,9 @@ struct GenericProfilePlotView: View {
                         }
 
                         // Line
-                        ForEach(Array(plotData.rho.enumerated()), id: \.offset) { index, rho in
+                        ForEach(Array(plotData.normalizedRadius.enumerated()), id: \.offset) { index, normalizedRadius in
                             LineMark(
-                                x: .value("ρ", rho),
+                                x: .value("ρ", normalizedRadius),
                                 y: .value(field.label, data[index])
                             )
                             .foregroundStyle(field.color)
@@ -170,8 +170,8 @@ struct GenericLiveProfilePlotView: View {
             }
 
             // Generate normalized radial coordinate
-            let nCells = profiles.ionTemperature.count
-            let rho = (0..<nCells).map { Float($0) / Float(nCells - 1) }
+            let cellCount = profiles.ionTemperature.count
+            let normalizedRadius = (0..<cellCount).map { Float($0) / Float(cellCount - 1) }
 
             // Convert data based on plot type
             let datasets = extractLiveData(from: profiles, plotType: plotType)
@@ -181,7 +181,7 @@ struct GenericLiveProfilePlotView: View {
                     let field = plotType.dataFields[fieldIndex]
 
                     // Area fill
-                    ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                    ForEach(Array(normalizedRadius.enumerated()), id: \.offset) { index, r in
                         AreaMark(
                             x: .value("ρ", r),
                             yStart: .value("Zero", 0),
@@ -192,7 +192,7 @@ struct GenericLiveProfilePlotView: View {
                     }
 
                     // Line
-                    ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                    ForEach(Array(normalizedRadius.enumerated()), id: \.offset) { index, r in
                         LineMark(
                             x: .value("ρ", r),
                             y: .value(field.label, dataset[index])
@@ -256,8 +256,8 @@ struct GenericLiveProfilePlotView: View {
         default:
             // Other plot types not available in live mode
             // Return zeros as placeholder
-            let nCells = profiles.ionTemperature.count
-            let zeroData = Array(repeating: Float(0.0), count: nCells)
+            let cellCount = profiles.ionTemperature.count
+            let zeroData = Array(repeating: Float(0.0), count: cellCount)
             return plotType.dataFields.map { _ in zeroData }
         }
     }

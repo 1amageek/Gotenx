@@ -82,7 +82,7 @@ struct MainCanvasView: View {
                             case .running:
                                 if let liveProfiles = liveProfiles {
                                     // 🐛 DEBUG: Log live profiles data
-                                    let _ = print("[DEBUG-MainCanvas] liveProfiles received: Ti=\(liveProfiles.ionTemperature.first ?? -1)...\(liveProfiles.ionTemperature.last ?? -1) eV, ne=\(liveProfiles.electronDensity.first ?? -1)...\(liveProfiles.electronDensity.last ?? -1) m^-3, nCells=\(liveProfiles.ionTemperature.count)")
+                                    let _ = print("[DEBUG-MainCanvas] liveProfiles received: ionTemperature=\(liveProfiles.ionTemperature.first ?? -1)...\(liveProfiles.ionTemperature.last ?? -1) eV, electronDensity=\(liveProfiles.electronDensity.first ?? -1)...\(liveProfiles.electronDensity.last ?? -1) m^-3, cellCount=\(liveProfiles.ionTemperature.count)")
 
                                     // Show real-time charts during simulation
                                     LazyVGrid(
@@ -214,14 +214,14 @@ struct TemperaturePlotView: View {
                 }
             }
 
-            if timeIndex < plotData.nTime {
+            if timeIndex < plotData.timeCount {
                 Chart {
                     // Ion temperature - Area + Line
-                    ForEach(Array(plotData.rho.enumerated()), id: \.offset) { index, rho in
+                    ForEach(Array(plotData.normalizedRadius.enumerated()), id: \.offset) { index, normalizedRadius in
                         AreaMark(
-                            x: .value("ρ", rho),
+                            x: .value("ρ", normalizedRadius),
                             yStart: .value("Zero", 0),
-                            yEnd: .value("Ti", plotData.Ti[timeIndex][index])
+                            yEnd: .value("ionTemperature", plotData.ionTemperature[timeIndex][index])
                         )
                         .foregroundStyle(
                             LinearGradient(
@@ -236,10 +236,10 @@ struct TemperaturePlotView: View {
                         .interpolationMethod(.catmullRom)
                     }
 
-                    ForEach(Array(plotData.rho.enumerated()), id: \.offset) { index, rho in
+                    ForEach(Array(plotData.normalizedRadius.enumerated()), id: \.offset) { index, normalizedRadius in
                         LineMark(
-                            x: .value("ρ", rho),
-                            y: .value("Ti", plotData.Ti[timeIndex][index])
+                            x: .value("ρ", normalizedRadius),
+                            y: .value("ionTemperature", plotData.ionTemperature[timeIndex][index])
                         )
                         .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
                         .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
@@ -247,11 +247,11 @@ struct TemperaturePlotView: View {
                     }
 
                     // Electron temperature - Area + Line
-                    ForEach(Array(plotData.rho.enumerated()), id: \.offset) { index, rho in
+                    ForEach(Array(plotData.normalizedRadius.enumerated()), id: \.offset) { index, normalizedRadius in
                         AreaMark(
-                            x: .value("ρ", rho),
+                            x: .value("ρ", normalizedRadius),
                             yStart: .value("Zero", 0),
-                            yEnd: .value("Te", plotData.Te[timeIndex][index])
+                            yEnd: .value("electronTemperature", plotData.electronTemperature[timeIndex][index])
                         )
                         .foregroundStyle(
                             LinearGradient(
@@ -266,10 +266,10 @@ struct TemperaturePlotView: View {
                         .interpolationMethod(.catmullRom)
                     }
 
-                    ForEach(Array(plotData.rho.enumerated()), id: \.offset) { index, rho in
+                    ForEach(Array(plotData.normalizedRadius.enumerated()), id: \.offset) { index, normalizedRadius in
                         LineMark(
-                            x: .value("ρ", rho),
-                            y: .value("Te", plotData.Te[timeIndex][index])
+                            x: .value("ρ", normalizedRadius),
+                            y: .value("electronTemperature", plotData.electronTemperature[timeIndex][index])
                         )
                         .foregroundStyle(Color(red: 0.3, green: 0.6, blue: 1.0))
                         .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
@@ -345,14 +345,14 @@ struct DensityPlotView: View {
                 }
             }
 
-            if timeIndex < plotData.nTime {
+            if timeIndex < plotData.timeCount {
                 Chart {
                     // Area fill
-                    ForEach(Array(plotData.rho.enumerated()), id: \.offset) { index, rho in
+                    ForEach(Array(plotData.normalizedRadius.enumerated()), id: \.offset) { index, normalizedRadius in
                         AreaMark(
-                            x: .value("ρ", rho),
+                            x: .value("ρ", normalizedRadius),
                             yStart: .value("Zero", 0),
-                            yEnd: .value("ne", plotData.ne[timeIndex][index])
+                            yEnd: .value("electronDensity", plotData.electronDensity[timeIndex][index])
                         )
                         .foregroundStyle(
                             LinearGradient(
@@ -368,10 +368,10 @@ struct DensityPlotView: View {
                     }
 
                     // Line
-                    ForEach(Array(plotData.rho.enumerated()), id: \.offset) { index, rho in
+                    ForEach(Array(plotData.normalizedRadius.enumerated()), id: \.offset) { index, normalizedRadius in
                         LineMark(
-                            x: .value("ρ", rho),
-                            y: .value("ne", plotData.ne[timeIndex][index])
+                            x: .value("ρ", normalizedRadius),
+                            y: .value("electronDensity", plotData.electronDensity[timeIndex][index])
                         )
                         .foregroundStyle(Color(red: 0.2, green: 0.8, blue: 0.4))
                         .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
@@ -549,8 +549,8 @@ struct LiveTemperaturePlotView: View {
             }
 
             // Generate normalized radial coordinate
-            let nCells = profiles.ionTemperature.count
-            let rho = (0..<nCells).map { Float($0) / Float(nCells - 1) }
+            let cellCount = profiles.ionTemperature.count
+            let normalizedRadius = (0..<cellCount).map { Float($0) / Float(cellCount - 1) }
 
             // Convert temperature from eV to keV
             let Ti_keV = profiles.ionTemperature.map { $0 / 1000.0 }
@@ -558,11 +558,11 @@ struct LiveTemperaturePlotView: View {
 
             Chart {
                 // Ion temperature - Area + Line
-                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                ForEach(Array(normalizedRadius.enumerated()), id: \.offset) { index, r in
                     AreaMark(
                         x: .value("ρ", r),
                         yStart: .value("Zero", 0),
-                        yEnd: .value("Ti", Ti_keV[index])
+                        yEnd: .value("ionTemperature", Ti_keV[index])
                     )
                     .foregroundStyle(
                         LinearGradient(
@@ -577,10 +577,10 @@ struct LiveTemperaturePlotView: View {
                     .interpolationMethod(.catmullRom)
                 }
 
-                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                ForEach(Array(normalizedRadius.enumerated()), id: \.offset) { index, r in
                     LineMark(
                         x: .value("ρ", r),
-                        y: .value("Ti", Ti_keV[index])
+                        y: .value("ionTemperature", Ti_keV[index])
                     )
                     .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
                     .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
@@ -588,11 +588,11 @@ struct LiveTemperaturePlotView: View {
                 }
 
                 // Electron temperature - Area + Line
-                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                ForEach(Array(normalizedRadius.enumerated()), id: \.offset) { index, r in
                     AreaMark(
                         x: .value("ρ", r),
                         yStart: .value("Zero", 0),
-                        yEnd: .value("Te", Te_keV[index])
+                        yEnd: .value("electronTemperature", Te_keV[index])
                     )
                     .foregroundStyle(
                         LinearGradient(
@@ -607,10 +607,10 @@ struct LiveTemperaturePlotView: View {
                     .interpolationMethod(.catmullRom)
                 }
 
-                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                ForEach(Array(normalizedRadius.enumerated()), id: \.offset) { index, r in
                     LineMark(
                         x: .value("ρ", r),
-                        y: .value("Te", Te_keV[index])
+                        y: .value("electronTemperature", Te_keV[index])
                     )
                     .foregroundStyle(Color(red: 0.3, green: 0.6, blue: 1.0))
                     .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
@@ -680,19 +680,19 @@ struct LiveDensityPlotView: View {
             }
 
             // Generate normalized radial coordinate
-            let nCells = profiles.electronDensity.count
-            let rho = (0..<nCells).map { Float($0) / Float(nCells - 1) }
+            let cellCount = profiles.electronDensity.count
+            let normalizedRadius = (0..<cellCount).map { Float($0) / Float(cellCount - 1) }
 
             // Convert density from m^-3 to 10^20 m^-3
             let ne_normalized = profiles.electronDensity.map { $0 / 1e20 }
 
             Chart {
                 // Area fill
-                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                ForEach(Array(normalizedRadius.enumerated()), id: \.offset) { index, r in
                     AreaMark(
                         x: .value("ρ", r),
                         yStart: .value("Zero", 0),
-                        yEnd: .value("ne", ne_normalized[index])
+                        yEnd: .value("electronDensity", ne_normalized[index])
                     )
                     .foregroundStyle(
                         LinearGradient(
@@ -708,10 +708,10 @@ struct LiveDensityPlotView: View {
                 }
 
                 // Line
-                ForEach(Array(rho.enumerated()), id: \.offset) { index, r in
+                ForEach(Array(normalizedRadius.enumerated()), id: \.offset) { index, r in
                     LineMark(
                         x: .value("ρ", r),
-                        y: .value("ne", ne_normalized[index])
+                        y: .value("electronDensity", ne_normalized[index])
                     )
                     .foregroundStyle(Color(red: 0.2, green: 0.8, blue: 0.4))
                     .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))

@@ -233,11 +233,11 @@ class SimulationSnapshot {
     var derived: Data?
     // ...
 
-    init(time: Float, profiles: CoreProfiles, derived: DerivedQuantities? = nil) {
+    init(time: Float, profiles: CoreProfiles, derived: DerivedQuantities? = nil) throws {
         self.id = UUID()
         self.time = time
-        self.profiles = (try? JSONEncoder().encode(profiles)) ?? Data()  // ❌ FAILS: CoreProfiles is NOT Codable
-        self.derivedQuantities = derived.flatMap { try? JSONEncoder().encode($0) }
+        self.profiles = try JSONEncoder().encode(profiles)  // ❌ FAILS: CoreProfiles is NOT Codable
+        self.derivedQuantities = try derived.map { try JSONEncoder().encode($0) }
         // ...
     }
 }
@@ -254,21 +254,21 @@ class SimulationSnapshot {
     var profiles: Data  // Will store SerializableProfiles, NOT CoreProfiles
     var derived: Data?
 
-    init(time: Float, profiles: SerializableProfiles, derived: DerivedQuantities? = nil) {
+    init(time: Float, profiles: SerializableProfiles, derived: DerivedQuantities? = nil) throws {
         self.id = UUID()
         self.time = time
-        self.profiles = (try? JSONEncoder().encode(profiles)) ?? Data()  // ✅ SerializableProfiles IS Codable
-        self.derivedQuantities = derived.flatMap { try? JSONEncoder().encode($0) }
+        self.profiles = try JSONEncoder().encode(profiles)  // ✅ SerializableProfiles IS Codable
+        self.derivedQuantities = try derived.map { try JSONEncoder().encode($0) }
         // ...
     }
 
     // OR better: Use TimePoint directly
-    init(from timePoint: TimePoint, simulation: Simulation) {
+    init(from timePoint: TimePoint, simulation: Simulation) throws {
         self.id = UUID()
         self.time = timePoint.time
-        self.profiles = (try? JSONEncoder().encode(timePoint.profiles)) ?? Data()
-        self.derivedQuantities = timePoint.derived.flatMap { try? JSONEncoder().encode($0) }
-        self.diagnostics = timePoint.diagnostics.flatMap { try? JSONEncoder().encode($0) }
+        self.profiles = try JSONEncoder().encode(timePoint.profiles)
+        self.derivedQuantities = try timePoint.derived.map { try JSONEncoder().encode($0) }
+        self.diagnostics = try timePoint.diagnostics.map { try JSONEncoder().encode($0) }
         self.simulation = simulation
         // ...
     }
@@ -344,14 +344,14 @@ private func saveResults(simulation: Simulation, result: SimulationResult) async
 
 **Correct**:
 ```swift
-private func saveResults(simulation: Simulation, result: SimulationResult) async {
+private func saveResults(simulation: Simulation, result: SimulationResult) async throws {
     // Option 1: Store entire result
-    try? await dataStore.saveSimulationResult(result, simulationID: simulation.id)
+    try await dataStore.saveSimulationResult(result, simulationID: simulation.id)
 
     // Option 2: Store individual snapshots from timeSeries
     if let timeSeries = result.timeSeries {
         for timePoint in timeSeries {
-            let snapshot = SimulationSnapshot(
+            let snapshot = try SimulationSnapshot(
                 from: timePoint,  // ✅ Use TimePoint from swift-gotenx
                 simulation: simulation
             )
@@ -360,8 +360,8 @@ private func saveResults(simulation: Simulation, result: SimulationResult) async
     }
 
     // Update simulation with final state
-    simulation.finalProfiles = try? JSONEncoder().encode(result.finalProfiles)  // ✅ SerializableProfiles
-    simulation.statistics = try? JSONEncoder().encode(result.statistics)
+    simulation.finalProfiles = try JSONEncoder().encode(result.finalProfiles)  // ✅ SerializableProfiles
+    simulation.statistics = try JSONEncoder().encode(result.statistics)
     simulation.status = .completed
 }
 ```
@@ -395,13 +395,13 @@ simulationTask = Task {
     let dynamicParams = DynamicRuntimeParams(from: config.runtime.dynamic)
 
     // 2. Create initial profiles (SerializableProfiles)
-    let initialProfiles = SerializableProfiles.defaultITERLike(nCells: staticParams.mesh.nCells)
+    let initialProfiles = SerializableProfiles.defaultITERLike(cellCount: staticParams.mesh.cellCount)
 
     // 3. Create orchestrator (actor isolated)
     let orchestrator = await SimulationOrchestrator(
         staticParams: staticParams,
         initialProfiles: initialProfiles,  // ✅ SerializableProfiles
-        transport: createTransportModel(config.runtime.dynamic.transport),
+        transport: try createTransportModel(config.runtime.dynamic.transport),
         sources: createSourceModels(config.runtime.dynamic.sources),
         samplingConfig: .balanced
     )
@@ -543,12 +543,12 @@ class SimulationSnapshot {
     var simulation: Simulation?
 
     /// Initialize from swift-gotenx TimePoint
-    init(from timePoint: TimePoint, simulation: Simulation) {
+    init(from timePoint: TimePoint, simulation: Simulation) throws {
         self.id = UUID()
         self.time = timePoint.time
-        self.profiles = (try? JSONEncoder().encode(timePoint.profiles)) ?? Data()
-        self.derived = timePoint.derived.flatMap { try? JSONEncoder().encode($0) }
-        self.diagnostics = timePoint.diagnostics.flatMap { try? JSONEncoder().encode($0) }
+        self.profiles = try JSONEncoder().encode(timePoint.profiles)
+        self.derived = try timePoint.derived.map { try JSONEncoder().encode($0) }
+        self.diagnostics = try timePoint.diagnostics.map { try JSONEncoder().encode($0) }
         self.timestamp = Date()
         self.isBookmarked = false
         self.simulation = simulation
@@ -585,9 +585,16 @@ Fix orchestrator initialization and result handling:
 
 ```swift
 func runSimulation(_ simulation: Simulation) async {
-    guard let configData = simulation.configuration,
-          let config = try? JSONDecoder().decode(SimulationConfiguration.self, from: configData) else {
+    guard let configData = simulation.configuration else {
         logger.error("Invalid simulation configuration")
+        return
+    }
+
+    let config: SimulationConfiguration
+    do {
+        config = try JSONDecoder().decode(SimulationConfiguration.self, from: configData)
+    } catch {
+        logger.error("Invalid simulation configuration: \(error.localizedDescription)")
         return
     }
 
@@ -598,13 +605,13 @@ func runSimulation(_ simulation: Simulation) async {
             let dynamicParams = DynamicRuntimeParams(from: config.runtime.dynamic)
 
             // Create initial profiles
-            let initialProfiles = SerializableProfiles.defaultITERLike(nCells: staticParams.mesh.nCells)
+            let initialProfiles = SerializableProfiles.defaultITERLike(cellCount: staticParams.mesh.cellCount)
 
             // Create orchestrator
             let orchestrator = await SimulationOrchestrator(
                 staticParams: staticParams,
                 initialProfiles: initialProfiles,
-                transport: createTransportModel(config.runtime.dynamic.transport),
+                transport: try createTransportModel(config.runtime.dynamic.transport),
                 sources: createSourceModels(config.runtime.dynamic.sources),
                 samplingConfig: SamplingConfig(
                     profileSamplingInterval: config.output.saveInterval,
@@ -639,8 +646,8 @@ private func saveResults(simulation: Simulation, result: SimulationResult) {
         try await dataStore.saveSimulationResult(result, simulationID: simulation.id)
 
         // Update simulation metadata
-        simulation.finalProfiles = try? JSONEncoder().encode(result.finalProfiles)
-        simulation.statistics = try? JSONEncoder().encode(result.statistics)
+        simulation.finalProfiles = try JSONEncoder().encode(result.finalProfiles)
+        simulation.statistics = try JSONEncoder().encode(result.statistics)
         simulation.status = .completed
         simulation.modifiedAt = Date()
 

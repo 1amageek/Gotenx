@@ -10,7 +10,7 @@ import SwiftUI
 
 /// Single log entry
 /// - Note: Codable conformance is required for log export/persistence features
-struct LogEntry: Identifiable, Codable, Equatable {
+nonisolated struct LogEntry: Identifiable, Codable, Equatable {
     let id: UUID
     let timestamp: Date
     let level: LogLevel
@@ -33,7 +33,7 @@ struct LogEntry: Identifiable, Codable, Equatable {
 }
 
 extension LogEntry {
-    enum LogLevel: String, Codable, CaseIterable, Identifiable {
+    nonisolated enum LogLevel: String, Codable, CaseIterable, Identifiable {
         case debug = "Debug"
         case info = "Info"
         case warning = "Warning"

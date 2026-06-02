@@ -140,10 +140,10 @@ class Simulation {
 
     var workspace: Workspace?
 
-    init(name: String, configuration: SimulationConfiguration) {
+    init(name: String, configuration: SimulationConfiguration) throws {
         self.id = UUID()
         self.name = name
-        self.configuration = (try? JSONEncoder().encode(configuration)) ?? Data()
+        self.configuration = try JSONEncoder().encode(configuration)
         self.status = .draft
         self.createdAt = Date()
         self.modifiedAt = Date()
@@ -178,11 +178,11 @@ class SimulationSnapshot {
 
     var simulation: Simulation?
 
-    init(time: Float, profiles: CoreProfiles, derived: DerivedQuantities? = nil) {
+    init(time: Float, profiles: CoreProfiles, derived: DerivedQuantities? = nil) throws {
         self.id = UUID()
         self.time = time
-        self.profiles = (try? JSONEncoder().encode(profiles)) ?? Data()
-        self.derivedQuantities = derived.flatMap { try? JSONEncoder().encode($0) }
+        self.profiles = try JSONEncoder().encode(profiles)
+        self.derivedQuantities = try derived.map { try JSONEncoder().encode($0) }
         self.timestamp = Date()
         self.isBookmarked = false
     }
@@ -338,7 +338,7 @@ extension SimulationConfiguration {
             time: TimeConfiguration(
                 start: 0.0,
                 end: 1.0,
-                initialDt: 1e-5
+                initialTimeStep: 1e-5
             ),
             output: OutputConfiguration(
                 directory: "/tmp/gotenx",

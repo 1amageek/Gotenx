@@ -62,7 +62,7 @@ final class PlotViewModel {
             let plotData = try PlotData(from: result)
 
             // 🐛 DEBUG: Log plotData
-            print("[DEBUG-PlotViewModel] PlotData created: nTime=\(plotData.nTime), nCells=\(plotData.nCells)")
+            print("[DEBUG-PlotViewModel] PlotData created: timeCount=\(plotData.timeCount), cellCount=\(plotData.cellCount)")
 
             // Update cache
             if cachedPlotData.count >= cacheLimit {
@@ -75,7 +75,7 @@ final class PlotViewModel {
             cachedPlotData[simulation.id] = plotData
             self.plotData = plotData
 
-            logger.info("Loaded plot data with \(plotData.nTime) time points")
+            logger.info("Loaded plot data with \(plotData.timeCount) time points")
 
         } catch {
             logger.error("Failed to load plot data: \(error)")
@@ -92,11 +92,15 @@ final class PlotViewModel {
         animationTask = Task {
             while isAnimating && !Task.isCancelled {
                 let frameDelay = Int(100 / animationSpeed)  // Base: 100ms
-                try? await Task.sleep(for: .milliseconds(frameDelay))
+                do {
+                    try await Task.sleep(for: .milliseconds(frameDelay))
+                } catch {
+                    return
+                }
 
                 await MainActor.run {
                     currentTimeIndex += 1
-                    if currentTimeIndex >= plotData.nTime {
+                    if currentTimeIndex >= plotData.timeCount {
                         currentTimeIndex = 0
                     }
                 }

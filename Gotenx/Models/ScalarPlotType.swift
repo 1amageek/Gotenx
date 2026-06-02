@@ -76,17 +76,17 @@ enum ScalarPlotType: String, CaseIterable, Identifiable {
     func extractData(from plotData: PlotData) -> [Float] {
         switch self {
         case .fusionGain:
-            return plotData.qFusion
+            return plotData.fusionGain
         case .plasmaCurrent:
-            return plotData.IpProfile
+            return plotData.plasmaCurrent
         case .bootstrapCurrent:
-            return plotData.IBootstrap
+            return plotData.bootstrapCurrent
         case .auxiliaryPower:
-            return plotData.pAuxiliary
+            return plotData.auxiliaryHeatingPower
         case .ohmicPower:
-            return plotData.pOhmicE
+            return plotData.ohmicElectronHeatingPower
         case .alphaPower:
-            return plotData.pAlphaTotal
+            return plotData.totalAlphaPower
         }
     }
 }

@@ -43,7 +43,7 @@ final class Simulation {
 }
 
 /// Simulation status enum
-enum SimulationStatusEnum: Codable, Equatable {
+nonisolated enum SimulationStatusEnum: Codable, Equatable {
     case draft
     case queued
     case running(progress: Double)

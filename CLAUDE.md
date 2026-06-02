@@ -143,7 +143,7 @@ let staticParams = try StaticRuntimeParams(from: config.runtime.static)
 let dynamicParams = try DynamicRuntimeParams(from: config.runtime.dynamic)
 
 // Create initial profiles (Codable)
-let initialProfiles = SerializableProfiles.defaultITERLike(nCells: staticParams.mesh.nCells)
+let initialProfiles = SerializableProfiles.defaultITERLike(cellCount: staticParams.mesh.cellCount)
 
 // Create transport and source models
 let transport = createTransportModel(config.runtime.dynamic.transport)

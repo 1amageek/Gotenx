@@ -336,25 +336,25 @@ struct DataInspectorView: View {
 
                 if let metadata = simulation.snapshotMetadata.last {
                     Section {
-                        LabeledContent("Core Ti") {
+                        LabeledContent("Core ionTemperature") {
                             Text("\(metadata.coreTi, specifier: "%.2f") keV")
                                 .fontWeight(.medium)
                                 .monospacedDigit()
                         }
 
-                        LabeledContent("Edge Ti") {
+                        LabeledContent("Edge ionTemperature") {
                             Text("\(metadata.edgeTi, specifier: "%.2f") keV")
                                 .fontWeight(.medium)
                                 .monospacedDigit()
                         }
 
-                        LabeledContent("Avg ne") {
+                        LabeledContent("Avg electronDensity") {
                             Text("\(metadata.avgNe, specifier: "%.2f") ×10²⁰ m⁻³")
                                 .fontWeight(.medium)
                                 .monospacedDigit()
                         }
 
-                        LabeledContent("Peak ne") {
+                        LabeledContent("Peak electronDensity") {
                             Text("\(metadata.peakNe, specifier: "%.2f") ×10²⁰ m⁻³")
                                 .fontWeight(.medium)
                                 .monospacedDigit()
@@ -402,10 +402,20 @@ struct DataInspectorView: View {
 struct ConfigInspectorView: View {
     let simulation: Simulation?
 
+    private var decodedConfiguration: SimulationConfiguration? {
+        guard let configData = simulation?.configurationData else {
+            return nil
+        }
+
+        do {
+            return try JSONDecoder().decode(SimulationConfiguration.self, from: configData)
+        } catch {
+            return nil
+        }
+    }
+
     var body: some View {
-        if let simulation = simulation,
-           let configData = simulation.configurationData,
-           let config = try? JSONDecoder().decode(SimulationConfiguration.self, from: configData) {
+        if let config = decodedConfiguration {
 
             Form {
                 Section {
@@ -426,7 +436,7 @@ struct ConfigInspectorView: View {
                     }
 
                     LabeledContent {
-                        Text("\(config.time.initialDt, specifier: "%.1e") s")
+                        Text("\(config.time.initialTimeStep, specifier: "%.1e") s")
                             .fontWeight(.medium)
                             .monospacedDigit()
                     } label: {
@@ -438,7 +448,7 @@ struct ConfigInspectorView: View {
 
                 Section {
                     LabeledContent {
-                        Text("\(config.runtime.static.mesh.nCells)")
+                        Text("\(config.runtime.static.mesh.cellCount)")
                             .fontWeight(.semibold)
                             .monospacedDigit()
                     } label: {
@@ -485,7 +495,7 @@ struct ConfigInspectorView: View {
 
                 Section {
                     LabeledContent {
-                        Text("\(config.runtime.static.solver.maxIterations)")
+                        Text("\(config.runtime.static.solver.maximumIterations)")
                             .fontWeight(.semibold)
                             .monospacedDigit()
                     } label: {
@@ -514,7 +524,7 @@ struct ConfigInspectorView: View {
                 } header: {
                     Label("Solver Settings", systemImage: "function")
                 } footer: {
-                    Text("Per-equation tolerances: Ti/Te=10eV, ne=1e17m⁻³, ψ=1mWb absolute")
+                    Text("Per-equation tolerances: ionTemperature/electronTemperature=10eV, electronDensity=1e17m⁻³, ψ=1mWb absolute")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
